@@ -1,0 +1,128 @@
+\documentclass[12pt,pdftex,a4paper]{article}
+\usepackage[english]{babel}
+\usepackage{enumitem} 
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{bbm}
+\usepackage[utf8]{inputenc}
+\usepackage{float}
+\usepackage{cleveref}
+
+\newcommand{\bbN}{\mathbbm{N}}
+\newcommand{\bbR}{\mathbbm{R}}
+\newcommand{\bbZ}{\mathbbm{Z}}
+\newcommand{\bbI}{\mathbbm{I}}
+
+\usepackage{amsthm}
+\usepackage{amsfonts}
+\usepackage{stmaryrd}
+\usepackage{mathtools}
+\usepackage{esvect} % Schöne Vektorpfeile mit \vv{\alpha}
+\usepackage[usenames]{color}
+\usepackage{polynom}
+\usepackage{geometry}
+\usepackage{tikz}
+\usetikzlibrary{decorations.pathreplacing}
+\geometry{verbose,a4paper,tmargin=25mm,bmargin=25mm,lmargin=15mm,rmargin=15mm}
+\usepackage{graphicx}
+\makeatletter
+\def\ScaleIfNeeded{%
+\ifdim\Gin@nat@width>\linewidth
+\linewidth
+\else
+\Gin@nat@width
+\fi
+}
+\makeatother
+
+%\geometry{verbose,a4paper,tmargin=25mm,bmargin=25mm,lmargin=15mm,rmargin=20mm}
+ 
+\title{Mathe}
+
+\newcommand{\setN}[0]{\mathbb{N}}
+\newcommand{\setF}[0]{\mathbb{F}}
+\newcommand{\setR}[0]{\mathbb{R}}
+\newcommand{\setZ}[0]{\mathbb{Z}}
+\newcommand{\setC}[0]{\mathbb{C}}
+\newcommand{\setP}[0]{\mathbb{P}}
+\newcommand{\setQ}[0]{\mathbb{Q}}
+\newcommand{\setK}[0]{\mathbb{K}}
+\newcommand{\winkel}{<\hspace{-1.25ex})\hspace{2.25ex}}
+\newcommand{\axi}[1]{{\label{#1}(#1)}}
+\newtheorem{defi}{Definition}[section]
+\newtheorem{satz}[defi]{Satz}
+\newtheorem{prop}[defi]{Proposition}
+\newtheorem{koro}[defi]{Korollar}
+\newtheorem{lemma}[defi]{Lemma}
+\newtheorem*{bsp}{Beispiel}
+\newtheorem*{commen}{Bemerkung}
+\newenvironment{alphb}{\begin{enumerate}
+\def\theenumi{(\alph{enumi})}}{\end{enumerate}}
+\newenvironment{arabb}{\begin{enumerate}
+\def\theenumi{\arabic{enumi})}}{\end{enumerate}}
+\renewcommand{\labelenumi}{\theenumi}
+\renewcommand{\theenumi}{\arabic{enumi}.}
+\newcommand{\litoinf}{\lim\limits_{n\to\infty}}
+\newcommand{\sumtoinf}{\sum\limits_{n=0}^\infty}
+\newcommand{\sumtok}{\sum\limits_{n=0}^k}
+\newcommand{\sumin}{\sum\limits^\infty}
+\newcommand{\fol}{_{n\in\setN}}
+\newcommand{\dx}{\mathrm{d}x}
+\newcommand{\dt}{\mathrm{d}t}
+\usepackage{tabulary}
+\usepackage{pdfpages}
+\usepackage{todonotes}
+
+\DeclareMathOperator{\Span}{Span}
+\let\oldphi\phi
+\renewcommand \phi \varphi
+\newcommand \my \mu
+\definecolor{dunkelgruen}{rgb}{0,0.4,0}
+
+
+%\usepackage[pdftex]{graphicx}
+\usepackage{listings}
+\lstset{language=Python,basicstyle=\footnotesize}
+
+\usepackage{newunicodechar}
+\newunicodechar{°}{\deg} % \deg wird zum °-Zeichen für Winkel oder Temperaturen. kA, warum LaTeX das nicht direkt mag.
+\begin{document}
+\title{Bachelor-Forschungsprojekt Informatik:\\Relevante OSM-Tags vorschlagen}
+\author{Marco Hildebrand, XXXX, stXXXX@stud.uni-stuttgart.de\\
+		Lukas Baur, XXX, stXXX@stud.uni-stuttgart.de\\
+		Felix Bühler, 2973410, st117123@stud.uni-stuttgart.de}
+\maketitle
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%Damit unser armer Tutor nicht mehr unsere Handschrift entziffern muss, machen wir unsere Abgaben nun in \LaTeX -- ist das nicht nett von uns?
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Einleitung}
+\section{Vorgehensweise}
+Anschauen von wiki xml dump
+
+unbrauchbare daten, da viel untereinander verlinkt ist.
+
+herunterladen der tags: https://taginfo.openstreetmap.org/
+
+\section{Gettings started}
+\subsection{languages}
+einfach eine liste aller sprachen bekommen mithilfe \texttt{taginfo-wiki.db}.
+
+Die kann man von \texttt{https://taginfo.openstreetmap.org/download} herunterladen.
+
+\subsection{export-links}
+herunterladen der osm-wiki sitemap
+\texttt{https://wiki.openstreetmap.org/sitemap-index-wiki.xml}
+
+
+davon interessiert uns nur \texttt{sitemap-wiki-NS\_0-0.xml} der rest enthält daten zu den nutzern, diskussionen und historie
+
+\section{crawl}
+alle gesammelten link in die \texttt{links.txt} legen
+
+\texttt{scrapy crawl osmWiki -t json -o keys.json}
+
+\subsection{pretty json}
+\texttt{python -m json.tool keys.json > keys-pretty.json}
+
+
+\end{document}
