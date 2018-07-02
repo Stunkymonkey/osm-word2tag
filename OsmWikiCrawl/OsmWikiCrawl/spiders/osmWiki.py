@@ -108,7 +108,7 @@ class OsmwikiSpider(scrapy.Spider):
                         break
 
             # non wiki tables need to be ignored (tables in tables, ...)
-            if "class" not in table or "wikitable" not in table["class"]:
+            if "wikitable" not in table.get("class", []):
                 continue
             keys = [filter(i.text) for i in table.find('tr').find_all('th')]
             result_table = []
