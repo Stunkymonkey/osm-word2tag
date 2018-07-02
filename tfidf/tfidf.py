@@ -16,7 +16,7 @@ document_6 = "Vladimir Putin is riding a horse while hunting deer. Vladimir Puti
 
 
 def tokenize(doc):
-    return doc.split(" ")
+    return doc.lower().split(" ")
 
 
 def find_similar(tfidf_matrix, index, top_n=5):
@@ -34,22 +34,33 @@ def read_json(filename):
 def main():
     filename = "tags.json"
     datastore = read_json(filename)
+    index = []
+    all_documents = []
     for doc in datastore:
-        print(doc["title"].replace("Tag:", "").replace("Key:", ""))
-        for item in doc:
-            print(item, "\t", doc[item])
-    # print(datastore)
+        index.append(doc["title"])
+        all_documents.append(json.dumps(doc))
 
-    all_documents = [document_0, document_1, document_2, document_3, document_4, document_5, document_6]
+    # all_documents = [document_0, document_1, document_2, document_3, document_4, document_5, document_6]
 
     tfidf = TfidfVectorizer(norm='l2', min_df=0, use_idf=True, smooth_idf=False,
                             sublinear_tf=True, tokenizer=tokenize, stop_words=stopwords.words('english'),
                             lowercase=True)
-    tfidf_matrix = tfidf.fit_transform(all_documents)
-    idf = tfidf.transform(["Putin Ruble country"])
-    for index, score in find_similar(tfidf_matrix, 3):
-        print(score, all_documents[index])
-    return
+    tf_matrix = tfidf.fit_transform(all_documents)
+
+    while True:
+        query = input("Search: ").split(" ")
+        # query = ["china", "putin", "asdf", "economy"]
+
+        tfidf_response = tfidf.transform(query)
+
+        if tfidf_response.size:
+            result = tf_matrix * tfidf_response.T
+            result_sum = result.sum(axis=1)
+            highest_score = np.argmax(result_sum)
+            print("result: ", highest_score)
+            print(index[highest_score])
+        else:
+            print("no result")
 
 
 if __name__ == '__main__':
