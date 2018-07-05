@@ -196,6 +196,5 @@ class OsmwikiSpider(scrapy.Spider):
                             tag_i_list.append(float(filter(amount[2].text).replace(" ", "").replace("%", "")))
                         item["side"]["tag_info"][save_string] = tag_i_list
 
-            # print(taginfo)
         # content.prettify()
         return item

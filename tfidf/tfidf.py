@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import linear_kernel
 from nltk.corpus import stopwords
 import numpy as np
 import json
@@ -17,12 +16,6 @@ document_6 = "Vladimir Putin is riding a horse while hunting deer. Vladimir Puti
 
 def tokenize(doc):
     return doc.lower().split(" ")
-
-
-def find_similar(tfidf_matrix, index, top_n=5):
-    cosine_similarities = linear_kernel(tfidf_matrix[index:index + 1], tfidf_matrix).flatten()
-    related_docs_indices = [i for i in cosine_similarities.argsort()[::-1] if i != index]
-    return [(index, cosine_similarities[index]) for index in related_docs_indices][0:top_n]
 
 
 def read_json(filename):
