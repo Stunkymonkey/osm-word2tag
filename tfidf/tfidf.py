@@ -4,14 +4,9 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from nltk.corpus import stopwords
 import numpy as np
 import json
+import itertools
 
-document_0 = "China has a strong economy that is growing at a rapid pace. However politically it differs greatly from the US Economy."
-document_1 = "At last, China seems serious about confronting an endemic problem: domestic violence and corruption."
-document_2 = "Japan's prime minister, Shinzo Abe, is working towards healing the economic turmoil in his own country for his view on the future of his people."
-document_3 = "Vladimir Putin is working hard to fix the economy in Russia as the Ruble has tumbled."
-document_4 = "What's the future of Abenomics? We asked Shinzo Abe for his views"
-document_5 = "Obama has eased sanctions on Cuba while accelerating those against the Russian Economy, even as the Ruble's value falls almost daily."
-document_6 = "Vladimir Putin is riding a horse while hunting deer. Vladimir Putin always seems so serious about things - even riding horses. Is he crazy?"
+index = []
 
 
 def tokenize(doc):
@@ -24,36 +19,160 @@ def read_json(filename):
             return json.load(f)
 
 
-def main():
-    filename = "tags.json"
-    datastore = read_json(filename)
+def no_filter(doc):
+    return doc
+
+
+def only_tags(doc):
+    if (doc["title"].startswith("Key:")):
+        return None
+    else:
+        return doc
+
+
+def only_keys(doc):
+    if (doc["title"].startswith("Tag:")):
+        return None
+    else:
+        return doc
+
+
+def no_duplicates(doc):
+    global index
+    if (doc["title"] in index):
+        return None
+    else:
+        return doc
+
+
+def only_main_desc(doc):
+    r = {}
+    r["title"] = doc["title"]
+    r["main_description"] = doc.get("main_description", None)
+    return r
+
+
+def has_table(doc):
+    if doc.get("tables", None) is not None:
+        return doc
+    else:
+        return None
+
+
+def only_table(doc):
+    if doc.get("tables", None) is not None:
+        r = {}
+        r["title"] = doc["title"]
+        r["tables"] = doc.get("tables", None)
+        return r
+    else:
+        return None
+
+
+def over_50_times(doc):
+    side = doc.get("side", None)
+    if side is None:
+        return None
+    numbers = side.get("tag_info", None)
+    if numbers is None or len(numbers) == 0:
+        return None
+    sum = 0
+    for v in numbers.values():
+        sum += int(v[0])
+    if sum > 50:
+        return doc
+    else:
+        return None
+
+
+def over_100_times(doc):
+    side = doc.get("side", None)
+    if side is None:
+        return None
+    numbers = side.get("tag_info", None)
+    if numbers is None or len(numbers) == 0:
+        return None
+    sum = 0
+    for v in numbers.values():
+        sum += int(v[0])
+    if sum > 100:
+        return doc
+    else:
+        return None
+
+
+def over_200_times(doc):
+    side = doc.get("side", None)
+    if side is None:
+        return None
+    numbers = side.get("tag_info", None)
+    if numbers is None or len(numbers) == 0:
+        return None
+    sum = 0
+    for v in numbers.values():
+        sum += int(v[0])
+    if sum > 200:
+        return doc
+    else:
+        return None
+
+
+def tfidf(query, filter, amount, datastore):
+    print()
+    s_filter = ""
+    for f in filter:
+        s_filter += f.__name__ + " "
+    print(s_filter + ":")
+
+    global index
     index = []
     all_documents = []
     for doc in datastore:
-        index.append(doc["title"])
-        all_documents.append(json.dumps(doc))
-
-    # all_documents = [document_0, document_1, document_2, document_3, document_4, document_5, document_6]
+        d = doc
+        for f in filter:
+            d = f(d)
+            if (d is None):
+                break
+        if (d is None):
+            continue
+        index.append(d["title"])
+        all_documents.append(json.dumps(d))
+    if len(all_documents) == 0:
+        print("no result")
+        return
 
     tfidf = TfidfVectorizer(norm='l2', min_df=0, use_idf=True, smooth_idf=False,
                             sublinear_tf=True, tokenizer=tokenize, stop_words=stopwords.words('english'),
                             lowercase=True)
     tf_matrix = tfidf.fit_transform(all_documents)
 
-    while True:
-        query = input("Search: ").split(" ")
-        # query = ["china", "putin", "asdf", "economy"]
+    tfidf_response = tfidf.transform(query)
 
-        tfidf_response = tfidf.transform(query)
-
-        if tfidf_response.size:
-            result = tf_matrix * tfidf_response.T
-            result_sum = result.sum(axis=1)
+    if tfidf_response.size:
+        result = tf_matrix * tfidf_response.T
+        result_sum = result.sum(axis=1)
+        for i in range(amount):
             highest_score = np.argmax(result_sum)
-            print("result: ", highest_score)
-            print(index[highest_score])
-        else:
-            print("no result")
+            result_sum[highest_score] = 0
+            print(i + 1, index[highest_score])
+    else:
+        print("no result")
+
+
+def main():
+    datastore = read_json("tags.json")
+    filters = [no_filter, only_tags, only_keys, no_duplicates,
+               only_main_desc, has_table, only_table, over_50_times, over_100_times, over_200_times]
+
+    while True:
+        try:
+            query = input("Search: ").split(" ")
+        except KeyboardInterrupt as e:
+            print()
+            exit()
+        for L in range(1, 3):
+            for f in itertools.combinations(filters, L):
+                tfidf(query, list(f), 3, datastore)
 
 
 if __name__ == '__main__':
