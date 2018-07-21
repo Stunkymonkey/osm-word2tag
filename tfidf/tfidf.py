@@ -24,20 +24,6 @@ def no_filter(doc):
     return doc
 
 
-def only_tags(doc):
-    if (doc["title"].startswith("Key:")):
-        return None
-    else:
-        return doc
-
-
-def only_keys(doc):
-    if (doc["title"].startswith("Tag:")):
-        return None
-    else:
-        return doc
-
-
 def no_duplicates(doc):
     global index
     if (doc["title"] in index):
@@ -63,12 +49,12 @@ def only_table(doc):
         return None
 
 
-def tfidf(query, filter, amount, datastore):
+def tfidf(query, filter, limiting, amount, datastore):
     print()
     s_filter = ""
     for f in filter:
         s_filter += f.__name__ + " "
-    print(s_filter + ":")
+    print(s_filter + limiting.__name__ + ":")
 
     global index
     index = []
@@ -83,6 +69,11 @@ def tfidf(query, filter, amount, datastore):
             if numbers is not None and len(numbers) != 0:
                 for v in numbers.values():
                     sum += int(v[0])
+        if doc["title"].startswith("Proposed features"):
+            continue
+        # TODO use Keys to generate all tags
+        if not doc["title"].startswith("Tag:"):
+            continue
         for f in filter:
             d = f(d)
             if (d is None):
@@ -109,19 +100,20 @@ def tfidf(query, filter, amount, datastore):
         for k in range(0, len(result_sum)):
             if (index_amount[k] == 0):
                 continue
-            result_sum[k] = result_sum[k] * np.log(index_amount[k])
-        for i in range(amount):
+            result_sum[k] = result_sum[k] * limiting(index_amount[k])
+        for _ in range(amount):
             highest_score = np.argmax(result_sum)
+            if result_sum[highest_score] == 0:
+                break
             result_sum[highest_score] = 0
-            print(i + 1, index[highest_score])
+            print(index[highest_score])
     else:
         print("no result")
 
 
 def main():
     datastore = read_json("tags.json")
-    filters = [no_filter, only_tags, only_keys, no_duplicates,
-               only_main_desc, only_table]
+    filters = [no_filter, no_duplicates, only_main_desc, only_table]
 
     """for L in range(1, 3):
         for f in itertools.combinations(filters, L):
@@ -134,9 +126,12 @@ def main():
         except KeyboardInterrupt as e:
             print()
             exit()
+        if not query[0]:
+            continue
         for L in range(1, 3):
             for f in itertools.combinations(filters, L):
-                tfidf(query, list(f), 3, datastore)
+                tfidf(query, list(f), np.sqrt, 3, datastore)
+                tfidf(query, list(f), np.log, 3, datastore)
 
 
 if __name__ == '__main__':
