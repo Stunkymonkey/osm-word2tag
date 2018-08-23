@@ -4,7 +4,6 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from nltk.corpus import stopwords
 import numpy as np
 import json
-import itertools
 
 index = []
 index_amount = []
@@ -18,10 +17,6 @@ def read_json(filename):
     if filename:
         with open(filename, 'r') as f:
             return json.load(f)
-
-
-def no_filter(doc):
-    return doc
 
 
 def no_duplicates(doc):
@@ -39,27 +34,30 @@ def only_main_desc(doc):
     return r
 
 
-def only_table(doc):
-    if doc.get("tables", None) is not None:
-        r = {}
-        r["title"] = doc["title"]
-        r["tables"] = doc.get("tables", None)
-        return r
-    else:
-        return None
+def only_content(doc):
+    r = {}
+    r["title"] = doc["title"]
+    r["content"] = doc.get("content", None)
+    return r
 
 
-def tfidf(query, filter, limiting, amount, datastore):
-    print()
+def only_side_desc(doc):
+    r = {}
+    r["title"] = doc["title"]
+    r["side_desc"] = doc.get("side", None).get("description", None)
+    return r
+
+
+def tfidf(query, filter, datastore):
     s_filter = ""
     for f in filter:
         s_filter += f.__name__ + " "
-    print(s_filter + limiting.__name__ + ":")
 
     global index
     index = []
-    all_documents = []
+    global index_amount
     index_amount = []
+    all_documents = []
     for doc in datastore:
         d = doc
         side = doc.get("side", None)
@@ -97,23 +95,27 @@ def tfidf(query, filter, limiting, amount, datastore):
     if tfidf_response.size:
         result = tf_matrix * tfidf_response.T
         result_sum = result.sum(axis=1)
-        for k in range(0, len(result_sum)):
-            if (index_amount[k] == 0):
-                continue
-            result_sum[k] = result_sum[k] * limiting(index_amount[k])
-        for _ in range(amount):
-            highest_score = np.argmax(result_sum)
-            if result_sum[highest_score] == 0:
-                break
-            result_sum[highest_score] = 0
-            print(index[highest_score])
+        return result_sum
     else:
-        print("no result")
+        return None
+
+
+def print_results(result, limiting, amount):
+    print(limiting.__name__ + ":")
+    for k in range(0, len(result)):
+        if (index_amount[k] == 0):
+            continue
+        result[k] = result[k] * limiting(index_amount[k])
+    for _ in range(amount):
+        highest_score = np.argmax(result)
+        if result[highest_score] == 0:
+            break
+        result[highest_score] = 0
+        print(index[highest_score])
 
 
 def main():
     datastore = read_json("tags.json")
-    filters = [no_filter, no_duplicates, only_main_desc, only_table]
 
     """for L in range(1, 3):
         for f in itertools.combinations(filters, L):
@@ -128,10 +130,17 @@ def main():
             exit()
         if not query[0]:
             continue
-        for L in range(1, 3):
-            for f in itertools.combinations(filters, L):
-                tfidf(query, list(f), np.sqrt, 3, datastore)
-                tfidf(query, list(f), np.log, 3, datastore)
+        main_desc_f = [no_duplicates, only_main_desc]
+        content_f = [no_duplicates, only_content]
+        side_desc_f = [no_duplicates, only_side_desc]
+        main_k = 0.333
+        side_k = 0.333
+        main_desc = tfidf(query, main_desc_f, datastore)
+        content = tfidf(query, content_f, datastore)
+        side_desc = tfidf(query, side_desc_f, datastore)
+        result = main_desc * main_k + content * (1 - (main_k + side_k)) + side_desc * side_k
+        print_results(result, np.sqrt, 5)
+        print_results(result, np.log, 5)
 
 
 if __name__ == '__main__':
