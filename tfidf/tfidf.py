@@ -97,11 +97,11 @@ def tfidf(query, filter, datastore):
         result_sum = result.sum(axis=1)
         return result_sum
     else:
-        return None
+        return []
 
 
 def print_results(result, limiting, amount):
-    print(limiting.__name__ + ":")
+    # print(limiting.__name__ + ":")
     for k in range(0, len(result)):
         if (index_amount[k] == 0):
             continue
@@ -138,8 +138,11 @@ def main():
         main_desc = tfidf(query, main_desc_f, datastore)
         content = tfidf(query, content_f, datastore)
         side_desc = tfidf(query, side_desc_f, datastore)
+        if (len(main_desc) == 0 and len(content) == 0 and len(side_desc) == 0):
+            print("no results")
+            continue
         result = main_desc * main_k + content * (1 - (main_k + side_k)) + side_desc * side_k
-        print_results(result, np.sqrt, 5)
+        # print_results(result, np.sqrt, 5)
         print_results(result, np.log, 5)
 
 
