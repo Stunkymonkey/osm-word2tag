@@ -38,6 +38,7 @@ def only_content(doc):
     r = {}
     r["title"] = doc["title"]
     r["content"] = doc.get("content", None)
+    r["tables"] = doc.get("tables", None)
     return r
 
 
