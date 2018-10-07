@@ -5,6 +5,8 @@ from nltk.corpus import stopwords
 import numpy as np
 import json
 
+from http.server import BaseHTTPRequestHandler, HTTPServer
+
 index = []
 index_amount = []
 
@@ -99,7 +101,8 @@ def query(q, tfidf, tf_matrix):
         return []
 
 
-def print_results(result, limiting, amount):
+def get_best(result, limiting, amount):
+    output = []
     for k in range(0, len(result)):
         if (index_amount[k] == 0):
             continue
@@ -109,10 +112,50 @@ def print_results(result, limiting, amount):
         if result[highest_score] == 0:
             break
         result[highest_score] = 0
-        print(index[highest_score])
+        output.append(index[highest_score])
+    return output
+
+
+def cli():
+    while True:
+        try:
+            q = input("Search: ").split(" ")
+        except KeyboardInterrupt as e:
+            print()
+            exit()
+        if not q[0]:
+            continue
+        output = handle_query(q)
+        if output:
+            for o in output:
+                print(o)
+
+
+def handle_query(q):
+    main_desc = query(q, tfidf_main_desc, matrix_main_desc)
+    content = query(q, tfidf_content, matrix_content)
+    side_desc = query(q, tfidf_side_desc, matrix_side_desc)
+
+    if (len(main_desc) == 0 and len(content) == 0 and len(side_desc) == 0):
+        print("no results")
+        return None
+
+    result = main_desc * main_k + content * content_k + side_desc * side_k
+    return get_best(result, np.log, 5)
 
 
 def main():
+    global main_k
+    global side_k
+    global content_k
+
+    global tfidf_main_desc
+    global matrix_main_desc
+    global tfidf_content
+    global matrix_content
+    global tfidf_side_desc
+    global matrix_side_desc
+
     datastore = read_json("tags.json")
 
     main_desc_f = [no_duplicates, only_main_desc]
@@ -126,26 +169,32 @@ def main():
     tfidf_content, matrix_content = tfidf(content_f, datastore)
     tfidf_side_desc, matrix_side_desc = tfidf(side_desc_f, datastore)
 
-    while True:
-        try:
-            q = input("Search: ").split(" ")
-        except KeyboardInterrupt as e:
-            print()
-            exit()
-        if not q[0]:
-            continue
 
-        main_desc = query(q, tfidf_main_desc, matrix_main_desc)
-        content = query(q, tfidf_content, matrix_content)
-        side_desc = query(q, tfidf_side_desc, matrix_side_desc)
+class OSMHTTPRequestHandler(BaseHTTPRequestHandler):
 
-        if (len(main_desc) == 0 and len(content) == 0 and len(side_desc) == 0):
-            print("no results")
-            continue
+    def do_POST(self):
+        content_length = int(self.headers['Content-Length'])
+        post_data = self.rfile.read(content_length)
+        # print("POST request,\nPath: %s\nHeaders:\n%s\n\nBody:\n%s\n", str(
+        #     self.path), str(self.headers), post_data.decode('utf-8'))
 
-        result = main_desc * main_k + content * content_k + side_desc * side_k
-        print_results(result, np.log, 5)
+        q = str(post_data.decode('utf-8'))
+        result = handle_query(q.split(" "))
+        result_s = '\n'.join(result) + "\n"
+
+        self.send_response(200)
+        self.send_header('Content-type', 'text/plain')
+        self.end_headers()
+        self.wfile.write(result_s.encode('utf-8'))
+
+
+def run():
+    server_address = ('127.0.0.1', 8080)
+    httpd = HTTPServer(server_address, OSMHTTPRequestHandler)
+    print('http server is running...')
+    httpd.serve_forever()
 
 
 if __name__ == '__main__':
     main()
+    run()
