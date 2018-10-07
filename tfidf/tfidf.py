@@ -49,11 +49,7 @@ def only_side_desc(doc):
     return r
 
 
-def tfidf(query, filter, datastore):
-    s_filter = ""
-    for f in filter:
-        s_filter += f.__name__ + " "
-
+def tfidf(filter, datastore):
     global index
     index = []
     global index_amount
@@ -68,10 +64,10 @@ def tfidf(query, filter, datastore):
             if numbers is not None and len(numbers) != 0:
                 for v in numbers.values():
                     sum += int(v[0])
-        if doc["title"].startswith("Proposed features"):
+        if not (doc["title"].startswith("Tag:") or doc["title"].startswith("Key:")):
             continue
         # TODO use Keys to generate all tags
-        if not doc["title"].startswith("Tag:"):
+        if doc["title"].startswith("Key:"):
             continue
         for f in filter:
             d = f(d)
@@ -89,9 +85,11 @@ def tfidf(query, filter, datastore):
     tfidf = TfidfVectorizer(norm='l2', min_df=0, use_idf=True, smooth_idf=False,
                             sublinear_tf=True, tokenizer=tokenize, stop_words=stopwords.words('english'),
                             lowercase=True)
-    tf_matrix = tfidf.fit_transform(all_documents)
+    return tfidf, tfidf.fit_transform(all_documents)
 
-    tfidf_response = tfidf.transform(query)
+
+def query(q, tfidf, tf_matrix):
+    tfidf_response = tfidf.transform(q)
 
     if tfidf_response.size:
         result = tf_matrix * tfidf_response.T
@@ -102,7 +100,6 @@ def tfidf(query, filter, datastore):
 
 
 def print_results(result, limiting, amount):
-    # print(limiting.__name__ + ":")
     for k in range(0, len(result)):
         if (index_amount[k] == 0):
             continue
@@ -118,32 +115,35 @@ def print_results(result, limiting, amount):
 def main():
     datastore = read_json("tags.json")
 
-    """for L in range(1, 3):
-        for f in itertools.combinations(filters, L):
-            tfidf("bath highway".split(" "), list(f), 3, datastore)
-    return"""
+    main_desc_f = [no_duplicates, only_main_desc]
+    content_f = [no_duplicates, only_content]
+    side_desc_f = [no_duplicates, only_side_desc]
+    main_k = 0.4
+    side_k = 0.35
+    content_k = 1 - (main_k + side_k)
+
+    tfidf_main_desc, matrix_main_desc = tfidf(main_desc_f, datastore)
+    tfidf_content, matrix_content = tfidf(content_f, datastore)
+    tfidf_side_desc, matrix_side_desc = tfidf(side_desc_f, datastore)
 
     while True:
         try:
-            query = input("Search: ").split(" ")
+            q = input("Search: ").split(" ")
         except KeyboardInterrupt as e:
             print()
             exit()
-        if not query[0]:
+        if not q[0]:
             continue
-        main_desc_f = [no_duplicates, only_main_desc]
-        content_f = [no_duplicates, only_content]
-        side_desc_f = [no_duplicates, only_side_desc]
-        main_k = 0.333
-        side_k = 0.333
-        main_desc = tfidf(query, main_desc_f, datastore)
-        content = tfidf(query, content_f, datastore)
-        side_desc = tfidf(query, side_desc_f, datastore)
+
+        main_desc = query(q, tfidf_main_desc, matrix_main_desc)
+        content = query(q, tfidf_content, matrix_content)
+        side_desc = query(q, tfidf_side_desc, matrix_side_desc)
+
         if (len(main_desc) == 0 and len(content) == 0 and len(side_desc) == 0):
             print("no results")
             continue
-        result = main_desc * main_k + content * (1 - (main_k + side_k)) + side_desc * side_k
-        # print_results(result, np.sqrt, 5)
+
+        result = main_desc * main_k + content * content_k + side_desc * side_k
         print_results(result, np.log, 5)
 
 
