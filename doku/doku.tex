@@ -92,11 +92,49 @@
 \maketitle
 
 \section*{Abstract}
-Die vom \textit{Institut für Formale Methoden der Informatik Stuttgart} entwickelte textbasierte Suchmaschine \textit{Oscar}, die OpenStreetMap-Daten auf Eingabe von OSM-Tags durchsucht, liefert unbefriedigende Ergebnisse auf anderweitige textuelle Eingaben. 
+Die vom \textit{Institut für Formale Methoden der Informatik Stuttgart} entwickelte textbasierte Suchmaschine \textit{OSCAR}, die OpenStreetMap-Daten auf Eingabe von OSM-Tags durchsucht, liefert unbefriedigende Ergebnisse auf anderweitige textuelle Eingaben. 
 Im Rahmen unseres Bachelor-Forschungsprojekt Informatik sollte diese Lücke geschlossen werden, indem eine Anfrage an das von uns entwickelte System eine Menge an damit verwandten, relevanten Tags zurückgibt.
 
-\section*{Abgrenzungen}
-Unsere Arbeit konzentriert sich auf die Suche der relevanten Tags zu einem eingegebenen Wort. Die Eingabe besteht demnach aus einem Wort der englischen Sprache, das nicht in der zugrundeliegenden Stop-Word-Liste enthalten ist.
+\pagebreak
+
+\section{Einleitendes}
+\subsection{Projektrahmen}
+Die Arbeit wurde im Rahmen des \textit{Bachelor-Forschungsprojekts Informatik} in der Zeit vom April bis Oktober 2018 angefertigt. Diese Ausarbeitung stellt die inhaltliche Dokumentation des entwickelten Moduls dar.
+\subsection{initiale Problemstellung}
+Grundlage für unsere Arbeit war die Suchmaschine \textit{OSCAR}, die vom \textit{Institut für Formale Methoden der Universität Stuttgart} entwickelt wurde.\\
+OSCAR durchsucht auf Eingabe eines \textit{OpenStreetMap-Tags} die  zugehörige Datenbank nach passenden Einträgen und bereitet das Suchresultat grafisch auf. Ein \textit{Tag} ist in OpenStreetMap wie folgt definiert:
+\begin{center}
+	\textbf{\textit{key}=\textit{value}}
+\end{center}
+Ein \textit{key} wird benutzt, um ein Themenbereich zu charakterisieren, es repräsentiert einen Typ oder beschreibt ein Feature. Außerdem werden Tags vereinzelt als Namespaces verwendet \cite{keyDescription}.\\
+Der \textit{value}-Teil stellt ein Wert des Features da. Typische Werte sind Eigenschaften oder Zahlen \cite{keyDescription}.
+Beispiele für Tags sind \textit{building=yes}, \textit{building=house} oder  \textit{highway=service} \cite{example1}\cite{example2}.\\
+
+Da die Eingabe auf Tags beschränkt ist, benötigt ein User zur Suche einen passenden Tag. Diese Lücke soll mithilfe dieses Projekts geschlossen werden. Das zu entwickelnde System soll auf Eingabe eines natürlichen Wortes der englischen Sprache möglichst eng verwandte, relevante OpenStreetMap-Tags vorschlagen.
+
+\subsection{Abgrenzungen}
+Unsere Arbeit konzentriert sich auf die Suche der relevanten Tags zu einem eingegebenen Wort. Formaler ausgedrückt besteht unsere Eingabe aus genau einem Wort der englischen Sprache, das nicht in der zugrundeliegenden Stop-Word-Liste enthalten ist.
+
+\subsection{Planungsaspekte}
+Zu Beginn unserer Arbeit gliederten wir unser Projekt in 
+
+
+
+\section{notizen}
+Phase 1: Planung
+- Tags und dazugehörige semantische Beschreibung holen
+- in Struktur bringen
+- Suchanfrage an Daten 
+	- vorhanden/nicht vorhanden 
+		-> bewerbung fehlt
+	- tf-idf
+		-> gut, aber Problem: Mehrere Links auf dieselbe Seite
+			-> Duplikate entfernen
+		-> hohe Gewichtung für kleine Seiten
+			-> Multiplizieren mit log/oder Wurzel 2
+- Suchraum expandieren
+	- mit Google Modell Anfrage semantisch auffüllen, Suche durchführen, am meisten Relevanten herausnehmen.
+
 \section{Einleitung}
 \subsection{Projektbeschreibung}
 
@@ -132,4 +170,9 @@ alle gesammelten link in die \texttt{links.txt} legen
 
 \pagebreak
 \section{Anhang}
+
+
+\bibliographystyle{unsrt}
+\bibliography{lit}
+
 \end{document}
