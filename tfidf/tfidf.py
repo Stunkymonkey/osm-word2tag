@@ -131,7 +131,7 @@ def cli():
                 print(o)
 
 
-def handle_query(q):
+def handle_query(q, amount):
     main_desc = query(q, tfidf_main_desc, matrix_main_desc)
     content = query(q, tfidf_content, matrix_content)
     side_desc = query(q, tfidf_side_desc, matrix_side_desc)
@@ -147,7 +147,7 @@ def handle_query(q):
     if isinstance(result, float) or (len(result) == 0):
         print("no results")
         return [""]
-    return get_best(result, np.log, 5)
+    return get_best(result, np.log, amount)
 
 
 def main():
@@ -185,8 +185,8 @@ class OSMHTTPRequestHandler(BaseHTTPRequestHandler):
         #     self.path), str(self.headers), post_data.decode('utf-8'))
 
         q = str(post_data.decode('utf-8'))
-        result = handle_query(q.split(" "))
-        result_s = '\n'.join(result) + "\n"
+        result = handle_query(q.split(" "), 5)
+        result_s = json.dumps(result)
 
         self.send_response(200)
         self.send_header('Content-type', 'text/plain')
