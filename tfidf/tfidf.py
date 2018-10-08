@@ -136,11 +136,17 @@ def handle_query(q):
     content = query(q, tfidf_content, matrix_content)
     side_desc = query(q, tfidf_side_desc, matrix_side_desc)
 
-    if (len(main_desc) == 0 and len(content) == 0 and len(side_desc) == 0):
-        print("no results")
-        return None
+    if len(main_desc) == 0:
+        main_desc = 0
+    if len(content) == 0:
+        content = 0
+    if len(side_desc) == 0:
+        side_desc = 0
 
     result = main_desc * main_k + content * content_k + side_desc * side_k
+    if isinstance(result, float) or (len(result) == 0):
+        print("no results")
+        return [""]
     return get_best(result, np.log, 5)
 
 
