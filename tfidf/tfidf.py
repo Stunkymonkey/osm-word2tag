@@ -5,10 +5,15 @@ from nltk.corpus import stopwords
 import numpy as np
 import json
 
+import gensim
+
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 index = []
 index_amount = []
+
+gmodel = gensim.models.KeyedVectors.load_word2vec_format(
+    './GoogleNews-vectors-negative300.bin', binary=True)
 
 
 def tokenize(doc):
@@ -181,12 +186,14 @@ class OSMHTTPRequestHandler(BaseHTTPRequestHandler):
     def do_POST(self):
         content_length = int(self.headers['Content-Length'])
         post_data = self.rfile.read(content_length)
-        # print("POST request,\nPath: %s\nHeaders:\n%s\n\nBody:\n%s\n", str(
-        #     self.path), str(self.headers), post_data.decode('utf-8'))
-
         q = str(post_data.decode('utf-8'))
-        result = handle_query(q.split(" "), 5)
-        result_s = json.dumps(result)
+
+        request = json.loads(q)
+        ms = gmodel.most_similar(positive=request["query"].split(" "), topn=int(request["nearest_neighbor"]))
+        print(ms)
+
+        result = handle_query(request["query"].split(" "), int(request["amount"]))
+        result_s = json.dumps(result) + "\n"
 
         self.send_response(200)
         self.send_header('Content-type', 'text/plain')
