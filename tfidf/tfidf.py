@@ -5,10 +5,15 @@ from nltk.corpus import stopwords
 import numpy as np
 import json
 
+import gensim
+
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 index = []
 index_amount = []
+
+gmodel = gensim.models.KeyedVectors.load_word2vec_format(
+    './GoogleNews-vectors-negative300.bin', binary=True)
 
 
 def tokenize(doc):
@@ -131,17 +136,23 @@ def cli():
                 print(o)
 
 
-def handle_query(q):
+def handle_query(q, amount):
     main_desc = query(q, tfidf_main_desc, matrix_main_desc)
     content = query(q, tfidf_content, matrix_content)
     side_desc = query(q, tfidf_side_desc, matrix_side_desc)
 
-    if (len(main_desc) == 0 and len(content) == 0 and len(side_desc) == 0):
-        print("no results")
-        return None
+    if len(main_desc) == 0:
+        main_desc = 0
+    if len(content) == 0:
+        content = 0
+    if len(side_desc) == 0:
+        side_desc = 0
 
     result = main_desc * main_k + content * content_k + side_desc * side_k
-    return get_best(result, np.log, 5)
+    if isinstance(result, float) or (len(result) == 0):
+        print("no results")
+        return [""]
+    return get_best(result, np.log, amount)
 
 
 def main():
@@ -175,12 +186,14 @@ class OSMHTTPRequestHandler(BaseHTTPRequestHandler):
     def do_POST(self):
         content_length = int(self.headers['Content-Length'])
         post_data = self.rfile.read(content_length)
-        # print("POST request,\nPath: %s\nHeaders:\n%s\n\nBody:\n%s\n", str(
-        #     self.path), str(self.headers), post_data.decode('utf-8'))
-
         q = str(post_data.decode('utf-8'))
-        result = handle_query(q.split(" "))
-        result_s = '\n'.join(result) + "\n"
+
+        request = json.loads(q)
+        ms = gmodel.most_similar(positive=request["query"].split(" "), topn=int(request["nearest_neighbor"]))
+        print(ms)
+
+        result = handle_query(request["query"].split(" "), int(request["amount"]))
+        result_s = json.dumps(result) + "\n"
 
         self.send_response(200)
         self.send_header('Content-type', 'text/plain')

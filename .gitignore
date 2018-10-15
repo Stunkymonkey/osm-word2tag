@@ -6,6 +6,8 @@ export-links/languages.txt
 export-links/tags.txt
 OsmWikiCrawl/links.txt
 *.json
+*.bin
+*.bin.gz
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
