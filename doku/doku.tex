@@ -100,7 +100,7 @@ Im Rahmen unseres Bachelor-Forschungsprojekt Informatik sollte diese Lücke gesc
 \section{Einleitendes}
 \subsection{Projektrahmen}
 Die Arbeit wurde im Rahmen des \textit{Bachelor-Forschungsprojekts Informatik} in der Zeit vom April bis Oktober 2018 angefertigt. Diese Ausarbeitung stellt die inhaltliche Dokumentation des entwickelten Moduls dar.
-\subsection{initiale Problemstellung}
+\subsection{Initiale Problemstellung}
 Grundlage für unsere Arbeit war die Suchmaschine \textit{OSCAR}, die vom \textit{Institut für Formale Methoden der Universität Stuttgart} entwickelt wurde.\\
 OSCAR durchsucht auf Eingabe eines \textit{OpenStreetMap-Tags} die  zugehörige Datenbank nach passenden Einträgen und bereitet das Suchresultat grafisch auf. Ein \textit{Tag} ist in OpenStreetMap wie folgt definiert:
 \begin{center}
@@ -115,16 +115,46 @@ Da die Eingabe auf Tags beschränkt ist, benötigt ein User zur Suche einen pass
 \subsection{Abgrenzungen}
 Unsere Arbeit konzentriert sich auf die Suche der relevanten Tags zu einem eingegebenen Wort. Formaler ausgedrückt besteht unsere Eingabe aus genau einem Wort der englischen Sprache, das nicht in der zugrundeliegenden Stop-Word-Liste enthalten ist.
 
+
+\section{Projekt-Durchführung}
 \subsection{Planungsaspekte}
-Zu Beginn unserer Arbeit gliederten wir unser Projekt in 
+Zu Beginn unserer Arbeit grenzten wir unser Projekt thematisch ein und überlegten uns eine grobe Vorstrukturierung.
+Dazu gliederten wir unser Projekt in \textbf{drei} wesentliche Bausteine:\\
+Im zeitlich ersten Arbeitsblock sollten wir uns mit der Darstellung, der Qualität und der Möglichkeit des Zugriffs der Daten vertraut machen. Im Folgenden überlegten wir uns eine aufbereitete brauchbare Daten-Zwischenform, auf deren Grundlage die spätere Suche durchgeführt werden soll. Der dritte Arbeitsbaustein galt der eigentlichen Such-Implementierung.\\
+Die bearbeiteten Arbeitspakete werden im folgenden inhaltlich beschrieben. Die Pakete sind intern zeitlich sequentiell beschrieben, überlappen sich allerdings in Ihrer Abarbeitung. Der Grund hierfür sind Abhängigkeiten, wie zum Beispiel, dass die Datenaufbereitung an die Repräsentation des Suchalgorithmus angepasst werden muss, zuvor aber Daten als Grundlage der Suche beschafft sein müssen.
+
+\subsection{Datenbeschaffung}
+Unsere anfängliche Recherche begannen wir mit der Website von OpenStreetMap \cite{WebsiteOSM}, insbesondere mit dem zugehörigem Wiki \cite{WebsiteOSMWiki}. Das OSM-Wiki verfügt über eine ausführliche Dokumentation vieler gängiger OSM-Tags. Unser Ziel war es, auf alle vorhandenen Daten-Tupel, bestehend aus einem gültigen Tag und einer zugehörigen Tag-Beschreibung, lokalen Zugriff zu haben.
+\\
+Leider besteht keine Möglichkeit das OSM-Wiki herunter zu laden. Wir kontaktierten den Verantwortlichen des Wikis, dieser konnte uns allerdings ebenfalls keine Kopie zukommen lassen. Folglich müssten wir die Webseiten des Wikis automatisiert crawlen. 
+\\
+Zwischenzeitlich versuchten wir alternativ mithilfe der Website \textit{taginfo} \cite{taginfoWebsite} an die gesuchten Daten zu gelangen. taginfo wurde in Zusammenarbeit von Jochen und Christian Topf entwickelt und sammelt auf Grundlage der OSM-Daten aktuell rund 2.500 Tags inklusive deren statistischen Charakteristika und teilweise Beschreibungen\cite{taginfoAbout}. Zusätzlich besteht die Möglichkeit, die komplette Datenbank herunterzuladen.\\
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=0.9\linewidth]{Bilder/taginfo_example}
+	\caption[Beispielhafte Darstellung taginfo]{Beispielhafte Datenbankeinträge der Datenbank von taginfo}
+	\label{fig:taginfoexample}
+\end{figure}
+
+Leider stellten wir fest, dass die Beschreibungs-Einträge der Datenbank zu lückenhaft und damit für unsere Zwecke nicht geeignet sind.
+Schließlich kombinierten wir unsere bisherigen Ansätze, indem wir die Tag-Einträge der heruntergeladenen taginfo-Datenbank als Grundlage für ein Crawlen der OSM-Wiki-Seite verwendeten. Dies war möglich, da neben der lückenhaften Beschreibung zu jedem Tag zusätzlich der Link zur Wiki-Seite abgespeichert war. Dieser generische Link bestand aus den Teilen
+\begin{center}
+	\textbf{wiki.openstreetmap.org/wiki/Tag\%3\textit{Key}\%3D\textit{value}}
+\end{center}
+wobei die Variablen \textit{key} und \textit{value} gemäß obiger Erklärung zu füllen sind.
 
 
+
+\subsection{Datenaufbereitung}
+
+\subsection{Suchanfrage beantworten}
 
 \section{notizen}
 Phase 1: Planung
 - Tags und dazugehörige semantische Beschreibung holen
 - in Struktur bringen
 - Suchanfrage an Daten 
+    - gensim (Python von Mendel zu Beginn vorgeschlagen)
 	- vorhanden/nicht vorhanden 
 		-> bewerbung fehlt
 	- tf-idf
