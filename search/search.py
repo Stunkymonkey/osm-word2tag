@@ -151,12 +151,9 @@ def summarize(query, amount, ms):
 
 
 def load():
-    global tfidf_main_desc
-    global matrix_main_desc
-    global tfidf_content
-    global matrix_content
-    global tfidf_side_desc
-    global matrix_side_desc
+    global tfidf_main_desc, matrix_main_desc
+    global tfidf_content, matrix_content
+    global tfidf_side_desc, matrix_side_desc
 
     datastore = read_json("tags.json")
 
@@ -165,8 +162,6 @@ def load():
     tfidf_main_desc, matrix_main_desc = tfidf(only_main_desc, all_documents)
     tfidf_content, matrix_content = tfidf(only_content, all_documents)
     tfidf_side_desc, matrix_side_desc = tfidf(only_side_desc, all_documents)
-    print(type(tfidf_side_desc))
-    print(type(matrix_side_desc))
 
 
 class OSMHTTPRequestHandler(BaseHTTPRequestHandler):
@@ -213,7 +208,6 @@ def cli():
 
 
 if __name__ == '__main__':
-    print(type(gmodel))
     load()
     if sys.argv[1].lower() == "cli":
         cli()
