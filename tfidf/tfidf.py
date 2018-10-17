@@ -36,14 +36,12 @@ def no_duplicates(doc):
 
 def only_main_desc(doc):
     r = {}
-    r["title"] = doc["title"]
     r["main_description"] = doc.get("main_description", None)
     return r
 
 
 def only_content(doc):
     r = {}
-    r["title"] = doc["title"]
     r["content"] = doc.get("content", None)
     r["tables"] = doc.get("tables", None)
     return r
@@ -51,12 +49,11 @@ def only_content(doc):
 
 def only_side_desc(doc):
     r = {}
-    r["title"] = doc["title"]
     r["side_desc"] = doc.get("side", None).get("description", None)
     return r
 
 
-def tfidf(filter, datastore):
+def create_index(filter, datastore):
     global index
     index = []
     global index_amount
@@ -71,28 +68,30 @@ def tfidf(filter, datastore):
             if numbers is not None and len(numbers) != 0:
                 for v in numbers.values():
                     sum += int(v[0])
-        if not (doc["title"].startswith("Tag:") or doc["title"].startswith("Key:")):
+        if not (doc["title"].startswith("Tag:")):
             continue
-        # TODO use Keys to generate all tags
-        if doc["title"].startswith("Key:"):
-            continue
-        for f in filter:
-            d = f(d)
-            if (d is None):
-                break
-        if (d is None):
+        d = filter(d)
+        if d is None:
             continue
         index.append(d["title"])
-        index_amount.append(sum)
-        all_documents.append(json.dumps(d))
-    if len(all_documents) == 0:
-        print("no result")
-        return
+        if sum == 0:
+            index_amount.append(0)
+        else:
+            index_amount.append(np.log(sum))
+        all_documents.append(d)
+    return all_documents
+
+
+def tfidf(filter, all_documents):
+    specific_docs = []
+    for doc in all_documents:
+        d = filter(doc)
+        specific_docs.append(json.dumps(d))
 
     tfidf = TfidfVectorizer(norm='l2', min_df=0, use_idf=True, smooth_idf=False,
                             sublinear_tf=True, tokenizer=tokenize, stop_words=stopwords.words('english'),
                             lowercase=True)
-    return tfidf, tfidf.fit_transform(all_documents)
+    return tfidf, tfidf.fit_transform(specific_docs)
 
 
 def query(q, tfidf, tf_matrix):
@@ -103,15 +102,11 @@ def query(q, tfidf, tf_matrix):
         result_sum = result.sum(axis=1)
         return result_sum
     else:
-        return []
+        return np.zeros((tf_matrix.shape[0], 1))
 
 
-def get_best(result, limiting, amount):
+def get_best(result, amount):
     output = []
-    for k in range(0, len(result)):
-        if (index_amount[k] == 0):
-            continue
-        result[k] = result[k] * limiting(index_amount[k])
     for _ in range(amount):
         highest_score = np.argmax(result)
         if result[highest_score] == 0:
@@ -119,6 +114,14 @@ def get_best(result, limiting, amount):
         result[highest_score] = 0
         output.append(index[highest_score])
     return output
+
+
+def limit(result):
+    for k in range(0, len(result)):
+        if (index_amount[k] == 0):
+            continue
+        result[k] = result[k] * index_amount[k]
+    return result
 
 
 def cli():
@@ -136,23 +139,25 @@ def cli():
                 print(o)
 
 
-def handle_query(q, amount):
+def handle_query(q):
     main_desc = query(q, tfidf_main_desc, matrix_main_desc)
     content = query(q, tfidf_content, matrix_content)
     side_desc = query(q, tfidf_side_desc, matrix_side_desc)
 
-    if len(main_desc) == 0:
-        main_desc = 0
-    if len(content) == 0:
-        content = 0
-    if len(side_desc) == 0:
-        side_desc = 0
-
     result = main_desc * main_k + content * content_k + side_desc * side_k
-    if isinstance(result, float) or (len(result) == 0):
-        print("no results")
-        return [""]
-    return get_best(result, np.log, amount)
+    return limit(result)
+
+
+def summarize(query, amount, ms):
+    q1 = handle_query(query)
+    vectors = []
+
+    for q in [i[0] for i in ms]:
+        vectors.append(handle_query([q]))
+    sum = q1
+    for v, similarity in zip(vectors, [i[1] for i in ms]):
+        sum += similarity * v
+    return get_best(sum, amount)
 
 
 def main():
@@ -169,16 +174,15 @@ def main():
 
     datastore = read_json("tags.json")
 
-    main_desc_f = [no_duplicates, only_main_desc]
-    content_f = [no_duplicates, only_content]
-    side_desc_f = [no_duplicates, only_side_desc]
     main_k = 0.4
     side_k = 0.35
     content_k = 1 - (main_k + side_k)
 
-    tfidf_main_desc, matrix_main_desc = tfidf(main_desc_f, datastore)
-    tfidf_content, matrix_content = tfidf(content_f, datastore)
-    tfidf_side_desc, matrix_side_desc = tfidf(side_desc_f, datastore)
+    all_documents = create_index(no_duplicates, datastore)
+
+    tfidf_main_desc, matrix_main_desc = tfidf(only_main_desc, all_documents)
+    tfidf_content, matrix_content = tfidf(only_content, all_documents)
+    tfidf_side_desc, matrix_side_desc = tfidf(only_side_desc, all_documents)
 
 
 class OSMHTTPRequestHandler(BaseHTTPRequestHandler):
@@ -190,9 +194,8 @@ class OSMHTTPRequestHandler(BaseHTTPRequestHandler):
 
         request = json.loads(q)
         ms = gmodel.most_similar(positive=request["query"].split(" "), topn=int(request["nearest_neighbor"]))
-        print(ms)
 
-        result = handle_query(request["query"].split(" "), int(request["amount"]))
+        result = summarize(request["query"].split(" "), int(request["amount"]), ms)
         result_s = json.dumps(result) + "\n"
 
         self.send_response(200)
