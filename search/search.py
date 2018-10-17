@@ -4,6 +4,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from nltk.corpus import stopwords
 import numpy as np
 import json
+import sys
 
 import gensim
 
@@ -11,6 +12,10 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 
 index = []
 index_amount = []
+
+main_k = 0.4
+side_k = 0.35
+content_k = 1 - (main_k + side_k)
 
 gmodel = gensim.models.KeyedVectors.load_word2vec_format(
     './GoogleNews-vectors-negative300.bin', binary=True)
@@ -105,38 +110,12 @@ def query(q, tfidf, tf_matrix):
         return np.zeros((tf_matrix.shape[0], 1))
 
 
-def get_best(result, amount):
-    output = []
-    for _ in range(amount):
-        highest_score = np.argmax(result)
-        if result[highest_score] == 0:
-            break
-        result[highest_score] = 0
-        output.append(index[highest_score])
-    return output
-
-
 def limit(result):
     for k in range(0, len(result)):
         if (index_amount[k] == 0):
             continue
         result[k] = result[k] * index_amount[k]
     return result
-
-
-def cli():
-    while True:
-        try:
-            q = input("Search: ").split(" ")
-        except KeyboardInterrupt as e:
-            print()
-            exit()
-        if not q[0]:
-            continue
-        output = handle_query(q)
-        if output:
-            for o in output:
-                print(o)
 
 
 def handle_query(q):
@@ -146,6 +125,17 @@ def handle_query(q):
 
     result = main_desc * main_k + content * content_k + side_desc * side_k
     return limit(result)
+
+
+def get_best(result, amount):
+    output = []
+    for _ in range(amount):
+        highest_score = np.argmax(result)
+        if result[highest_score] == 0:
+            break
+        result[highest_score] = 0
+        output.append(index[highest_score])
+    return output
 
 
 def summarize(query, amount, ms):
@@ -160,11 +150,7 @@ def summarize(query, amount, ms):
     return get_best(sum, amount)
 
 
-def main():
-    global main_k
-    global side_k
-    global content_k
-
+def load():
     global tfidf_main_desc
     global matrix_main_desc
     global tfidf_content
@@ -174,15 +160,13 @@ def main():
 
     datastore = read_json("tags.json")
 
-    main_k = 0.4
-    side_k = 0.35
-    content_k = 1 - (main_k + side_k)
-
     all_documents = create_index(no_duplicates, datastore)
 
     tfidf_main_desc, matrix_main_desc = tfidf(only_main_desc, all_documents)
     tfidf_content, matrix_content = tfidf(only_content, all_documents)
     tfidf_side_desc, matrix_side_desc = tfidf(only_side_desc, all_documents)
+    print(type(tfidf_side_desc))
+    print(type(matrix_side_desc))
 
 
 class OSMHTTPRequestHandler(BaseHTTPRequestHandler):
@@ -193,11 +177,12 @@ class OSMHTTPRequestHandler(BaseHTTPRequestHandler):
         q = str(post_data.decode('utf-8'))
 
         request = json.loads(q)
-        ms = gmodel.most_similar(positive=request["query"].split(" "), topn=int(request["nearest_neighbor"]))
+        user_input = request["query"].split(" ")
 
-        result = summarize(request["query"].split(" "), int(request["amount"]), ms)
+        ms = gmodel.most_similar(positive=user_input, topn=int(request["nearest_neighbor"]))
+        result = summarize(user_input, int(request["amount"]), ms)
+
         result_s = json.dumps(result) + "\n"
-
         self.send_response(200)
         self.send_header('Content-type', 'text/plain')
         self.end_headers()
@@ -211,6 +196,26 @@ def run():
     httpd.serve_forever()
 
 
+def cli():
+    while True:
+        try:
+            q = input("Search: ").split(" ")
+        except KeyboardInterrupt as e:
+            print()
+            exit()
+        if not q[0]:
+            continue
+        ms = gmodel.most_similar(positive=q, topn=10)
+        result = summarize(q, 5, ms)
+        if result:
+            for r in result:
+                print(r)
+
+
 if __name__ == '__main__':
-    main()
-    run()
+    print(type(gmodel))
+    load()
+    if sys.argv[1].lower() == "cli":
+        cli()
+    else:
+        run()
