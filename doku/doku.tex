@@ -1,5 +1,6 @@
 \documentclass[12pt,pdftex,a4paper]{article}
 \usepackage[english]{babel}
+\usepackage{hyperref}
 \usepackage{enumitem} 
 \usepackage{amsmath}
 \usepackage{amssymb}
@@ -84,12 +85,15 @@
 
 \usepackage{newunicodechar}
 \newunicodechar{°}{\deg} % \deg wird zum °-Zeichen für Winkel oder Temperaturen. kA, warum LaTeX das nicht direkt mag.
+
+
 \begin{document}
 \title{Bachelor-Forschungsprojekt Informatik:\\Relevante OSM-Tags vorschlagen}
 \author{Marco Hildebrand, XXXX, stXXXX@stud.uni-stuttgart.de\\
 		Lukas Baur, 3131138, st141998@stud.uni-stuttgart.de\\
 		Felix Bühler, 2973410, st117123@stud.uni-stuttgart.de}
 \maketitle
+
 
 \section*{Abstract}
 Die vom \textit{Institut für Formale Methoden der Informatik Stuttgart} entwickelte textbasierte Suchmaschine \textit{OSCAR}, die OpenStreetMap-Daten auf Eingabe von OSM-Tags durchsucht, liefert unbefriedigende Ergebnisse auf anderweitige textuelle Eingaben. 
@@ -124,30 +128,54 @@ Im zeitlich ersten Arbeitsblock sollten wir uns mit der Darstellung, der Qualit�
 Die bearbeiteten Arbeitspakete werden im folgenden inhaltlich beschrieben. Die Pakete sind intern zeitlich sequentiell beschrieben, überlappen sich allerdings in Ihrer Abarbeitung. Der Grund hierfür sind Abhängigkeiten, wie zum Beispiel, dass die Datenaufbereitung an die Repräsentation des Suchalgorithmus angepasst werden muss, zuvor aber Daten als Grundlage der Suche beschafft sein müssen.
 
 \subsection{Datenbeschaffung}
+\subsubsection{Download des OSM Wikis}
 Unsere anfängliche Recherche begannen wir mit der Website von OpenStreetMap \cite{WebsiteOSM}, insbesondere mit dem zugehörigem Wiki \cite{WebsiteOSMWiki}. Das OSM-Wiki verfügt über eine ausführliche Dokumentation vieler gängiger OSM-Tags. Unser Ziel war es, auf alle vorhandenen Daten-Tupel, bestehend aus einem gültigen Tag und einer zugehörigen Tag-Beschreibung, lokalen Zugriff zu haben.
 \\
-Leider besteht keine Möglichkeit das OSM-Wiki herunter zu laden. Wir kontaktierten den Verantwortlichen des Wikis, dieser konnte uns allerdings ebenfalls keine Kopie zukommen lassen. Folglich müssten wir die Webseiten des Wikis automatisiert crawlen. 
+Leider bestand nur die Möglichkeit eine veraltete Version des OSM-Wiki von 2013 herunter zu laden, die zudem jedoch frei von erkennbaren Strukturen war, und uns somit keinen Ansatz lieferte. 
 \\
-Zwischenzeitlich versuchten wir alternativ mithilfe der Website \textit{taginfo} \cite{taginfoWebsite} an die gesuchten Daten zu gelangen. taginfo wurde in Zusammenarbeit von Jochen und Christian Topf entwickelt und sammelt auf Grundlage der OSM-Daten aktuell rund 2.500 Tags inklusive deren statistischen Charakteristika und teilweise Beschreibungen\cite{taginfoAbout}. Zusätzlich besteht die Möglichkeit, die komplette Datenbank herunterzuladen.\\
+\subsubsection{Der Versuch mit tagInfo}
+Zwischenzeitlich versuchten wir alternativ mithilfe der Website \textit{taginfo} \cite{taginfoWebsite} an die gesuchten Daten zu gelangen. taginfo wurde in Zusammenarbeit von Jochen und Christian Topf entwickelt und sammelt auf Grundlage der OSM-Daten aktuell rund 2.500 Tags inklusive deren statistischen Charakteristika und teilweise Beschreibungen\cite{taginfoAbout}. Zusätzlich besteht die Möglichkeit, deren komplette Datenbank herunterzuladen.\\
 \begin{figure}[h]
 	\centering
 	\includegraphics[width=0.9\linewidth]{Bilder/taginfo_example}
 	\caption[Beispielhafte Darstellung taginfo]{Beispielhafte Datenbankeinträge der Datenbank von taginfo}
 	\label{fig:taginfoexample}
 \end{figure}
-
 Leider stellten wir fest, dass die Beschreibungs-Einträge der Datenbank zu lückenhaft und damit für unsere Zwecke nicht geeignet sind.
-Schließlich kombinierten wir unsere bisherigen Ansätze, indem wir die Tag-Einträge der heruntergeladenen taginfo-Datenbank als Grundlage für ein Crawlen der OSM-Wiki-Seite verwendeten. Dies war möglich, da neben der lückenhaften Beschreibung zu jedem Tag zusätzlich der Link zur Wiki-Seite abgespeichert war. Dieser generische Link bestand aus den Teilen
+Als Zwischenlösung kombinierten wir unseren bisherigen Ansätze, indem wir die Tag-Einträge der heruntergeladenen taginfo-Datenbank als Grundlage für ein Crawlen der OSM-Wiki-Seite verwenden wollten: Wir wollten ausnutzen, dass ein Link zu einer tag-beschreibenden Wiki-Seite die folgende Form aufweist:
 \begin{center}
 	\textbf{wiki.openstreetmap.org/wiki/Tag\%3\textit{Key}\%3D\textit{value}}
 \end{center}
-wobei die Variablen \textit{key} und \textit{value} gemäß obiger Erklärung zu füllen sind.
+Wobei die Variablen \textit{key} und \textit{value} gemäß obiger Erklärung zu füllen sind. Unvorteilhafterweise stellte sich das Downloaden der Seiten schwieriger als gedacht heraus, da es zu manchen Tags noch nicht einmal eine Wiki-Seite gibt.
 
-
+\subsubsection{Finallösung mit OSM-Wiki-Sitemap}
+Schlussendlich verfolgten wir den finalen Ansatz, die aktuelle Sitemap der Wiki-Seiten\cite{sitemap-index-wiki-link} herunterzuladen und anschließend die Links, welche die im vorhergehenden Abschnitt beschriebene Strukur ausweisten, herausgeschrieben.\\
+Als Resultat hatten wir nun alle möglichen OSM-Wiki-Seiten lokal im \textit{HTML}-Format zur Verfügung. Es konnten die Daten für den nächsten Arbeitsschritt, dem Aufbereiten der Einträge, weiterverwendet werden.
 
 \subsection{Datenaufbereitung}
+Eine Such-Engine auf Grundlage der HTMl-Files aufzusetzen, schlossen wir aus mehreren Gründen aus. Zuerst, findet sich in den HTMl-Files viele unnötige Informationen wieder, z.B. Bild-Links, \textit{JavaScript}-Teile oder gar unwichtige Metainformationen der Seite. Das alles verlangsamt zum einen die spätere Suche, verfälscht zum anderen aber auch den späteren Such- und Indizierungsprozess.\\
+Unser Ziel war es, die Daten in eine solche Form umzuwandeln, dass unsere Such-Engine effizient darauf arbeiten kann.
+
+\subsubsection{Initiale Idee}
+Zu Beginn verfolgen wir die Idee, wiederkehrende Strukturen zu erkennen und in unser Suchranking miteinbeziehen. Existiert beispielsweise innerhalb der OSM-Wiki-Seite zu dem Tag \textit{highway=residential} ein Paragraphen \textit{related Tags} mit dem Eintrag \textit{highway=tertiary}, so ist es für den Nutzer möglicherweise interessant, auf Eingabe von \textit{highway} beide Ergebisse vorzufinden, auch wenn die Beschreibung von \textit{highway=tertiary} nicht allein zum Suchwort gepasst hätte. Es würde in folge dessen ein Beziehungs-Netzwerk aufgebaut werden.
+
+\subsubsection{Probleme des initialen Ansatzes}
+Unglücklicherweise stellten sich heraus, dass die Artikel des Wikis keiner spezifischen Form folgten. Zum einen sind die Strukturen zwischen den Artikeln sehr verschieden (zudem auch verschieden ausführlich), zum anderen finden sich inhaltlich ähnliche Absätze unter verschiedenen Überschriften, so beziehen sich ``See Also'', ``See also'', ``see also'', ``related tags'', ``Related Tags'' oder ``Similar Tag'' eigentlich semantisch auf dasselbe.
+Das Ziel, weitere Informationen aus Tabellen zu entnehmen konnte aufgrund der heterogenen Struktur der Seiten ebenfalls nicht erreicht werden.
+
+\subsubsection{Implementierte Variante}
+Um die spätere Suchanfrage dennoch befriedigend beantworten zu können, einigten wir uns auf eine Struktur, die die Seite in drei Teile zerteilt. Später werden diese dann unabhängig voneinander durchsucht und gewichtet in die Ergebnisliste eingebracht. Die Struktur der aufbereiteten Daten lässt sich der unteren Grafik \autoref{fig:jsonDarstellung} entnehmen.\\
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=0.9\linewidth]{Bilder/json_structure}
+	\caption[Schematische Darstellung]{Schematische Darstellung der \textit{.json}-Struktur. Die Einträge mit spitzen Klammern markieren entsprech Meta-Anweisungen}
+	\label{fig:jsonDarstellung}
+\end{figure}
+Das Ergebnis dieser Arbeitsphase war eine vollständige Liste von \textit{.json}-Objekten, die die texteullen Informationen der HTML-Seiten enthalten, Metainformationen wie Skripte und HTML-Tags jedoch nicht. Zudem sind die Informationen gruppiert und wir erhalten Zugriff auf die Auftrittshäufigkeit eines jeden Tags.
 
 \subsection{Suchanfrage beantworten}
+
+
 
 \section{notizen}
 Phase 1: Planung
@@ -165,14 +193,35 @@ Phase 1: Planung
 - Suchraum expandieren
 	- mit Google Modell Anfrage semantisch auffüllen, Suche durchführen, am meisten Relevanten herausnehmen.
 
+\section{ausblick/besser machen}
+- Google Modell verkleinern: Wörter raus werfen, damit Modell kleiner wird. Nur Wörter verwenden, die innerhalb des OSM-Wikis vorkommen
+- Python NLTK: Entnehme Eingabe Semantische Zusammenhänge: Eingabe von Fragen, Mehrgewichtung gemäß Semantik.
+- Extraktion von Schlüsselwörter aus Wiki-Seiten
+- Struktur der Seiten besser ausnutzen
+	- "nicht zu verwechseln mit .. " wird als treffer gewichtet
+	- Tabellen unbeachtet
+
 \section{Einleitung}
 \subsection{Projektbeschreibung}
 
 \pagebreak
 \section{Vorgehensweise}
-Anschauen von wiki xml dump
 
-unbrauchbare daten, da viel untereinander verlinkt ist.
+1. Anschauen von wiki xml dump (Export von 2013) 
+-> Struktur nicht erkennbar + veraltete Daten.
+
+2. taginfo: (um an Tags zu kommen) Datenbank herunter geladen, nicht immer aktuellster Stand, Statitsik: Idee: Generieren von Links, mithilfe von Key=value Anfrage an Website, aber möglicherweise Fehler, da dazu kein Wiki-Eintrag exisitert.
+
+3. nochmal wiki xml dump -> Alle Links des Wikis
+4  davon Struktur: filtern der Links, die auf Tags verweisen.
+-> Ergebnis: Liste aller Links, die auf OSM-Tag-Seiten zeigen.
+5. Crawler: Download aller HTML Files
+6. Ergebnis: pretty-Datei.
+
+Implementierung:
+1. Schritt: expandieren der Suchanfrage gemäß Semantik auf k Begriffe (mithilfe von W2V) 
+2. Schritt: für jeden 
+
 
 herunterladen der tags: https://taginfo.openstreetmap.org/
 
