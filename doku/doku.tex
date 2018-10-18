@@ -116,7 +116,7 @@ Beispiele für Tags sind \textit{building=yes}, \textit{building=house} oder  \t
 
 Da die Eingabe auf Tags beschränkt ist, benötigt ein User zur Suche einen passenden Tag. Diese Lücke soll mithilfe dieses Projekts geschlossen werden. Das zu entwickelnde System soll auf Eingabe eines natürlichen Wortes der englischen Sprache möglichst eng verwandte, relevante OpenStreetMap-Tags vorschlagen.
 
-\subsection{Abgrenzungen}
+\subsection{Abgrenzungen} \label{sec:abgrenzung}
 Unsere Arbeit konzentriert sich auf die Suche der relevanten Tags zu einem eingegebenen Wort. Formaler ausgedrückt besteht unsere Eingabe aus genau einem Wort der englischen Sprache, das nicht in der zugrundeliegenden Stop-Word-Liste enthalten ist.
 
 
@@ -174,8 +174,39 @@ Um die spätere Suchanfrage dennoch befriedigend beantworten zu können, einigte
 Das Ergebnis dieser Arbeitsphase war eine vollständige Liste von \textit{.json}-Objekten, die die texteullen Informationen der HTML-Seiten enthalten, Metainformationen wie Skripte und HTML-Tags jedoch nicht. Zudem sind die Informationen gruppiert und wir erhalten Zugriff auf die Auftrittshäufigkeit eines jeden Tags.
 
 \subsection{Suchanfrage beantworten}
+Die finale Phase verknüpft alle bereits getätigten Arbeiten zu einer gesamten Anwendung, die aus mehreren funktionalen Einheiten besteht. Aus der \autoref{fig:implstructure} lassen sich die wesentlichen Komponenten erkennen. \\
+Diese Dokumentation nutzt im Folgenden die Pipeline-artige Struktur der Implementierung aus, um die Implementierung von links her sequentiell zu erklären.
+
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=1.0\linewidth]{Bilder/impl_structure}
+	\caption[Schematische Darstellung]{Gesamtstruktur der Such-Implementierung}
+	\label{fig:implstructure}
+\end{figure}
+
+\subsubsection{Eingabeparameter}
+Die produzierende Ausgabe ist, neben den Wiki-Seite die den eigentlichen Suchraums überhaupt definiert, von drei Freiheitsgrade bestimmt. \\
+Die \textit{query}-Eingabe besteht aus einem Wort der englischen Sprache, wie in  \autoref{sec:abgrenzung} zu Beginn definiert.
+Die Ausgabe der Algorithmus soll $k \in \mathbb{N}_{>0}$ gültige Tags zurückliefern, die möglichst passend zur Eingabe \textit{query} sind. 
+Wie wir in \autoref{sec:expansion} zeigen werden, erweitern wir die Eingabe als ersten Schritt semantisch. Der Grad Expansion wird durch den Parameter $e \in \mathbb{N}_{>0}$ beeinflusst.
 
 
+\subsubsection{Query Expansion}\label{sec:expansion}
+\textbf{Idee}\\
+Die dahinterstehende Idee des ersten Pipeline-Knotens ist die Folgende: Da die Tag-Auswahl relativ begrenzt und zudem auf syntaktisch identische Treffer begrenzt ist, wollen wir die Eingabe erweitern. Dies möchten wir mit einem konstruiertem Beispiel verdeutlichen: Angenommen der User sucht nach \textit{Schnellrestaurant}, auf keiner OSM-Seite gebe es kein Vorkommen dieses Wortes, so würde die Suche keine Ergebnisse liefern. Durch Query-Expansion würden wir die Eingabe um die Wörter \textit{Fastfood-Restaurant}, \textit{Schnellrestaurants} und \textit{Restaurant} erweitern. Als Resultat können wir so \textit{amenity=fast\_food} erwarten. Ähnliche Beispiele könnten sich auch für die Englische Sprache konstruieren lassen.\\
+\textit{}\\
+\textbf{Realisierung}\\
+Wir verwendeten für die Umsetzung das Framework \textit{Google word2vec}\cite{googleword2vec}. Es erlaubt auf Eingabe eines Wortes die Suche nach möglichst nahegelegenen Wörtern mit derselben Semantik. Der große Vorteil dadurch ist zusätzlich, dass wir parallel nach Singular und Plural der Eingabe suchen können, da deren Semantik praktisch identisch ist.\\
+Das Resultat der Anwendung des Frameworks sind \textit{e-1} semantisch ähnliche Wörter, die zu dem Vektor der Eingabequery in nächster Umgebung lagen. Wir nennen diese im folgenden $q_2, q_3, \dots, q_e$. Implizit wird $q_1$ als die Anfangsquery betrachtet.
+
+Neben den semantisch ähnlichen Queries speichern wir ebenfalls die vektorwertige (semantischen) Distanz zum Eingabevektor ab. Diese Ähnlichkeitswerte nennen wir entsprechend  $s_1, s_2, \dots, s_e$ mit der Eigenschaft $0 < s_i \leq 1$. Je höher dieser Wert, desto näher ist der Begriff der Ursprungsquery semantisch. Es dürfte offensichtlich sein, dass $s_1$ demnach den Wert $1$ besitzt.
+
+\subsubsection{Scoring}
+Die \textit{tf-idf-Komponente} ist dafür zuständig, möglichst relevante Tags zu den $s_i$ zu finden. Dafür nutzen wir die aufbereiteten \textit{.json}-Files des OSM-Wikis -  wie in \autoref{fig:jsonDarstellung} erklärt - als Grundlage für unsere Suche.
+Zu Beginn erstellen wir drei verschiedene Indizes, die von dieselben Dimension sind. Der erste indiziert alle \textit{main-description}-Teile der Wiki-Seiten, der zweite alle \textit{side-description}-Teile und der letzte die restlichen Inhalte der \textit{.json}-Einträge. 
+Für jedes der $s_i$ starten wir eine Suche in jedem Indizes, wir erhalten folglich die Zwischenergebnisvektoren $\vec{sub}_{i,0}, \vec{sub}_{i,1}, \vec{sub}_{i,2}$, stellvertretend für die drei Teile.
+
+\subsubsection{Frequency Compensation}
 
 \section{notizen}
 Phase 1: Planung
