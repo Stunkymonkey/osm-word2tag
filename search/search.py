@@ -13,10 +13,6 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 index = []
 index_amount = []
 
-main_k = 0.4
-side_k = 0.35
-content_k = 1 - (main_k + side_k)
-
 gmodel = gensim.models.KeyedVectors.load_word2vec_format(
     './GoogleNews-vectors-negative300.bin', binary=True)
 
@@ -123,19 +119,22 @@ def handle_query(q):
     content = query(q, tfidf_content, matrix_content)
     side_desc = query(q, tfidf_side_desc, matrix_side_desc)
 
-    result = main_desc * main_k + content * content_k + side_desc * side_k
+    result = main_desc * (1.0 / 3.0) + content * (1.0 / 3.0) + side_desc * (1.0 / 3.0)
     return limit(result)
 
 
 def get_best(result, amount):
     output = []
+    z = []
     for _ in range(amount):
         highest_score = np.argmax(result)
+        z.append(result.item((highest_score, 0)))
         if result[highest_score] == 0:
             break
         result[highest_score] = 0
         output.append(index[highest_score])
-    return output
+    softmax = np.exp(z) / np.sum(np.exp(z))
+    return output, softmax
 
 
 def summarize(query, amount, ms):
@@ -173,13 +172,30 @@ class OSMHTTPRequestHandler(BaseHTTPRequestHandler):
 
         request = json.loads(q)
         user_input = request["query"].split(" ")
+        if not user_input[0]:
+            self.send_response(500)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            self.wfile.write("error: no query provided\n".encode('utf-8'))
+            return
 
-        ms = gmodel.most_similar(positive=user_input, topn=int(request["nearest_neighbor"]))
-        result = summarize(user_input, int(request["amount"]), ms)
+        google_input = []
+        for word in user_input:
+            if word in gmodel.vocab:
+                google_input.append(word)
 
-        result_s = json.dumps(result) + "\n"
+        ms = []
+        if google_input:
+            ms = gmodel.most_similar(positive=google_input, topn=int(request["nearest_neighbor"]))
+        result, percentage = summarize(user_input, int(request["amount"]), ms)
+
+        obj = []
+        for r, p in zip(result, percentage):
+            obj.append([r, p])
+
+        result_s = json.dumps(obj) + "\n"
         self.send_response(200)
-        self.send_header('Content-type', 'text/plain')
+        self.send_header('Content-type', 'application/json')
         self.end_headers()
         self.wfile.write(result_s.encode('utf-8'))
 
@@ -194,22 +210,32 @@ def run():
 def cli():
     while True:
         try:
-            q = input("Search: ").split(" ")
+            user_input = input("Search: ").split(" ")
         except KeyboardInterrupt as e:
             print()
             exit()
-        if not q[0]:
+        if not user_input[0]:
             continue
-        ms = gmodel.most_similar(positive=q, topn=10)
-        result = summarize(q, 5, ms)
+
+        google_input = []
+        for word in user_input:
+            if word in gmodel.vocab:
+                google_input.append(word)
+
+        ms = []
+        if google_input:
+            ms = gmodel.most_similar(positive=google_input, topn=10)
+        result, percentage = summarize(user_input, 5, ms)
+
         if result:
-            for r in result:
-                print(r)
+            for r, p in zip(result, percentage):
+                print(r, "\t", p)
 
 
 if __name__ == '__main__':
     load()
-    if sys.argv[1].lower() == "cli":
-        cli()
+    if len(sys.argv) > 1:
+        if sys.argv[1].lower() == "cli":
+            cli()
     else:
         run()
