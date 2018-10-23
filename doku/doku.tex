@@ -133,7 +133,7 @@ Unsere anfängliche Recherche begannen wir mit der Website von OpenStreetMap \ci
 \\
 Leider bestand nur die Möglichkeit eine veraltete Version des OSM-Wiki von 2013 herunter zu laden, die zudem jedoch frei von erkennbaren Strukturen war, und uns somit keinen Ansatz lieferte. 
 \\
-\subsubsection{Der Versuch mit tagInfo}
+\subsubsection{Der Versuch mit tagInfo}\label{sec:tagInfo}
 Zwischenzeitlich versuchten wir alternativ mithilfe der Website \textit{taginfo} \cite{taginfoWebsite} an die gesuchten Daten zu gelangen. taginfo wurde in Zusammenarbeit von Jochen und Christian Topf entwickelt und sammelt auf Grundlage der OSM-Daten aktuell rund 2.500 Tags inklusive deren statistischen Charakteristika und teilweise Beschreibungen\cite{taginfoAbout}. Zusätzlich besteht die Möglichkeit, deren komplette Datenbank herunterzuladen.\\
 \begin{figure}[h]
 	\centering
@@ -201,39 +201,83 @@ Das Resultat der Anwendung des Frameworks sind \textit{e-1} semantisch ähnliche
 
 Neben den semantisch ähnlichen Queries speichern wir ebenfalls die vektorwertige (semantischen) Distanz zum Eingabevektor ab. Diese Ähnlichkeitswerte nennen wir entsprechend  $s_1, s_2, \dots, s_e$ mit der Eigenschaft $0 < s_i \leq 1$. Je höher dieser Wert, desto näher ist der Begriff der Ursprungsquery semantisch. Es dürfte offensichtlich sein, dass $s_1$ demnach den Wert $1$ besitzt.
 
-\subsubsection{Scoring}
+\subsubsection{Scoring}\label{sec:scoring}
 Die \textit{tf-idf-Komponente} ist dafür zuständig, möglichst relevante Tags zu den $s_i$ zu finden. Dafür nutzen wir die aufbereiteten \textit{.json}-Files des OSM-Wikis -  wie in \autoref{fig:jsonDarstellung} erklärt - als Grundlage für unsere Suche.
+Die Bewertung besteht aus zwei Phasen, die sequentiell ausgeführt werden. In der ersten Phase werden zu einem gegebenen Suchwort jeweils 3 Scores berechnet. Jeder der drei Scores beschreibt hierbei den \textit{tf-idf}-Wert innerhalb eines Tag-Dokuments, repräsentativ für einen Dokumentteil.
+Anschließend werden die Zwischenscores gewichtet verrechnet.
 Zu Beginn erstellen wir drei verschiedene Indizes, die von dieselben Dimension sind. Der erste indiziert alle \textit{main-description}-Teile der Wiki-Seiten, der zweite alle \textit{side-description}-Teile und der letzte die restlichen Inhalte der \textit{.json}-Einträge. 
-Für jedes der $s_i$ starten wir eine Suche in jedem Indizes, wir erhalten folglich die Zwischenergebnisvektoren $\vec{sub}_{i,0}, \vec{sub}_{i,1}, \vec{sub}_{i,2}$, stellvertretend für die drei Teile.
+Für jedes der $q_i$ starten wir eine Suche in jedem Indizes, wir erhalten folglich die Zwischenergebnisvektoren $\vec{sub}_{i,0}, \vec{sub}_{i,1}, \vec{sub}_{i,2}$, stellvertretend für die drei Teile.\\
+Die Idee war nun, eine sinnvolle Gewichtung der Treffer zu finden. Einen guten Treffer in der kurzen Main-Description soll in etwa so viel wert sein wie eine sehr passender Treffer in der ausführlichen \textit{Content}-Sektion. Somit soll es möglich sein, von der absoluten Textlänge zu abstrahieren und gleichzeitig sehr kurze Seiten, die dadurch einen sehr hohen tf-idf-Score haben, zu dämpfen.\\
+In der Praxis stellte sich eine gleichmäßige Gewichtung von je ein Drittel als zweckmäßig heraus. Die neuen, kombinierten tf-idf-Scores lassen sich demnach mit $c_1 = c_2 = c_3 = \dfrac{1}{3}$ wie folgt berechnen:\\
+\begin{center}
+	$\vec{score}_{i} = \sum_{j=0}^{2} c_j * \vec{sub}_{i,j}$
+\end{center}.
 
 \subsubsection{Frequency Compensation}
+Grundidee des \textit{Frequency Compensation} Moduls ist eine Bevorzugung oft genutzter Tags, gegenüber sehr seltenen. Hierzu beziehen wir die Statistik der in \autoref{sec:tagInfo} beschriebenen \textit{tagInfo}-Daten. \\
+Da ein beispielweise zehnfach so oft getaggtes Wort, im Allgemeinen offensichtlich nicht auch zehnfach so relevant ist, verwendeten wir an dieser Stelle anstatt der reinen Multiplikation die Logarithmusfunktion. Die neuen Werte lassen sich mit 
+\begin{center}
+	 $\vec{score}_{i}^{'} = \vec{score_i} * log(\vec{freq})$
+\end{center}
+berechnen. $\vec{freq}$ bezeichnet hierzu den Vektor, der die absoluten Häufigkeiten der zugehörigen Tags beinhaltet. Selbige Konstruktion schließt offensichtlich den Fall aus, den Logarithmus von 0 zu berechnen.
+
+\subsubsection{Term weighting}\label{sec:term_weighting}
+Bis hierher wurden nun also zu einer Eingabe $e-1$ weitere Wörter abgeleitet, und jeweils gewichtete und anschließend geglättete tf-idf-Vektoren entsprechend berechnet. Als letzten Vorbereitungsschritt sollen die $e$ Vektoren zusammengelegt werden, gewichtet nach der ursprünglichen Relevanz zum Suchwort.\\
+Die Bedeutung der Berechnung sollte intuitiv sein: Jeder der $e$ Vektoren speichert je einen Wert pro Tag ab, der die entsprechenden Relevanz abbildet. Die $s_i$, die ein Maß der semantischen Ähnlichkeit der Ursprungseingabe $q_1$ zu allen anderen $q_i$ sind, Werden nun als Gewichtung verwendet. Dadurch werden semantisch ähnliche Suchtreffer höher gewichtet als semantisch suboptimale. Ein Beispiel sollte dies klar machen. Angenommen, die Suche nach $q_1 =$ \textit{waterfall} wird zu $q_2 =$ \textit{rural\_area} mit einer Ähnlichkeit von  $s_2 = 0.3$ expandiert und dessen if-idf-Score des Wertes \textit{residential=rural} wäre 200. Zudem habe $q_1 $ einen unerwartet niedrigen if-idf-Score von 120 beim Tag \textit{waterway=waterfall}, da z.B. die Wiki-Seite unbefriedigend erstellt worden ist. Durch die Gewichtung der Vektoren gemäß semantischer Ähnlichkeit zur ursprünglichen Eingabe, erhalten wir den erwarteten Suchtreffer.\\
+Der finale Scoring-Vektor lässt sich demnach mit\\
+\begin{center}
+	$\vec{fin} = \sum_{i=1}^{e} s_i * \vec{score}_{i}^{'}$
+\end{center}.
+berechnen.
+
+
+\subsubsection{top k - result collecting}
+Die Berechnung in \autoref{sec:term_weighting} liefert uns eine Vektor mit der Dimension in der Anzahl der Tags, und repräsentiert die Befriedigung der Eingabequery. Um den Benutzer eine Auswahl über mehrere mögliche passende Tags zu bieten, werden nun davon die besten \textit{k} Ergebnisse zurück geliefert.
+
+
+\section{Bedienung der Anwendung}
+
+\subsection{Starten}
+\subsection{Aufbau der Anfrage}
+\subsection{Odds and And}
+
+\section{Projektrefelxion}
+\subsection{Verbesserungsansätze}
+Nach Abschluss des Projektes möchten wir ein paar Ansätze nennen, an denen man in Zukunft arbeiten könnte, um das System effizienter und schneller zu machen und die Qualität des Rankings zu erhöhen.
+\subsubsection{Google Word2Vec}
+Das aktuelle Modell, das wir für das Expandieren der Wörter auf e Terms verwenden, besitzt eine Größe von circa 3.4 Gigabyte. Folglich nimmt das Starten des Serves eine erhebliche Zeit in Anspruch, zudem werden Speicherressourcen verschwendet.\\
+Da in dem eigentlichen tf-idf-Scoring ein Treffer nur als ein solcher gezählt wird, wenn dieser als String innerhalb eines Wiki-Dokumente auftaucht, könnten wir in dem Google-Vektor Modell nur solche Wörter als Eingabe erlauben, die in der Wiki-Seiten vorkommen.\\
+Das spart Platz im RAM, sowie Zeit beim Ein- und auslesen.
+\subsubsection{Syntaktische um Semantische Suche ergänzen}\label{sec:semantikInSuche}
+Wir verwenden eine semantische Erweiterung der Startanfrage auf insgesamt \textit{e} Suchanfragen. Leider verwendet unser aktuelles System für den eigentlichen Suchalgorithmus lediglich eine syntaktische Suche. Hier entstehen Treffer, die nicht als solche gezählt werden sollten. Beispielsweise wird ein Tag bei der Suche nach \textit{waterfall} mit einem Treffer markiert, wenn es Formulierungen wie \textit{`... not to be confounded with waterfall''} beinhaltet.\\
+Man könnte sich in diesem Zusammenhang mit dem Framework \textit{NLTK} unter Python auseinandersetzen. Hier könnte neben der Wiki-Seiten, auch die Query semantisch analysiert werden, sodass gezielt Fragen beantwortet werden könnten
+\subsubsection{Struktur besser ausnutzen}
+In Anlehnung an \autopageref{sec:semantikInSuche}, wird in unserem Modell die interne Struktur der Wiki-Seiten noch nicht ausreichend genutzt. Man könnte noch mehr Semantik aus der Struktur den Seiten entnehmen, indem beispielsweise Tabellen besser eingebunden werden. \\
+Schwierig bleibt jedoch auch hier wieder die Gewichtung der Semantik. Selbiges Problem wird in \autoref{sec:gliederungContent} diskutiert.
+\subsubsection{Gewichtung der Content-Teile}
+\label{sec:gliederungContent}
+In \autoref{sec:scoring} erläuterten wir das Vorgehen, verschiedene Teile der Wiki-Seiten unabhängig zu indizieren und anschließend den Score geeignet zu kombinieren. Eine begründete Wahl der $c_i$ zu finden, stellt sich als Herausforderung dar. Der Lesen möge sich die Frage ``Welcher Tag passt am besten zur Eingabe ...?'' konstruieren, um herauszufinden, welche Parameterwahl als passend erscheint. \\
+Für mehr als 2 Freiheitsgrade der Parameter wird es sich allerdings als schwierig herausstellen, die Optimalität dieser Wahl zu begründen.
+
+\section{ausblick/besser machen}
+- Extraktion von Schlüsselwörter aus Wiki-Seiten
 
 \section{notizen}
 Phase 1: Planung
 - Tags und dazugehörige semantische Beschreibung holen
 - in Struktur bringen
 - Suchanfrage an Daten 
-    - gensim (Python von Mendel zu Beginn vorgeschlagen)
-	- vorhanden/nicht vorhanden 
-		-> bewerbung fehlt
-	- tf-idf
-		-> gut, aber Problem: Mehrere Links auf dieselbe Seite
-			-> Duplikate entfernen
-		-> hohe Gewichtung für kleine Seiten
-			-> Multiplizieren mit log/oder Wurzel 2
+- gensim (Python von Mendel zu Beginn vorgeschlagen)
+- vorhanden/nicht vorhanden 
+-> bewerbung fehlt
+- tf-idf
+-> gut, aber Problem: Mehrere Links auf dieselbe Seite
+-> Duplikate entfernen
+-> hohe Gewichtung für kleine Seiten
+-> Multiplizieren mit log/oder Wurzel 2
 - Suchraum expandieren
-	- mit Google Modell Anfrage semantisch auffüllen, Suche durchführen, am meisten Relevanten herausnehmen.
+- mit Google Modell Anfrage semantisch auffüllen, Suche durchführen, am meisten Relevanten herausnehmen.
 
-\section{ausblick/besser machen}
-- Google Modell verkleinern: Wörter raus werfen, damit Modell kleiner wird. Nur Wörter verwenden, die innerhalb des OSM-Wikis vorkommen
-- Python NLTK: Entnehme Eingabe Semantische Zusammenhänge: Eingabe von Fragen, Mehrgewichtung gemäß Semantik.
-- Extraktion von Schlüsselwörter aus Wiki-Seiten
-- Struktur der Seiten besser ausnutzen
-	- "nicht zu verwechseln mit .. " wird als treffer gewichtet
-	- Tabellen unbeachtet
-
-\section{Einleitung}
-\subsection{Projektbeschreibung}
 
 \pagebreak
 \section{Vorgehensweise}
