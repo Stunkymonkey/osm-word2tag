@@ -1,0 +1,16 @@
+{
+        "title": "<Tag-Name>",
+        "url": "<URL zum OSM-Wiki>",
+        "related_terms": <Liste mit zugehörigen Tags, die als Tabelle zu finden waren>,
+        "tables": [ <Tabellen, mit jeweils Zeilen/Spaltenattributen> ],
+        "main_description": "<die textuelle Beschreibung des Tags bis zum ersten Absatz>",
+        "content": <Objekt, dass wiederum Objekte für jeden Absatz und dessen Inhalt speichert>,
+        "side": {
+            "description": "<textuelle Kurzbeschreibung>",
+            <optional weitere Paare>
+            ],
+            "tag_info": {<Statistiken als Objekt>}
+        }
+}
+
+
