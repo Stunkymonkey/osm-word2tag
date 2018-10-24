@@ -89,7 +89,7 @@
 
 \begin{document}
 \title{Bachelor-Forschungsprojekt Informatik:\\Relevante OSM-Tags vorschlagen}
-\author{Marco Hildebrand, XXXX, stXXXX@stud.uni-stuttgart.de\\
+\author{Marco Hildebrand, 3137242, st3137242@stud.uni-stuttgart.de\\
 		Lukas Baur, 3131138, st141998@stud.uni-stuttgart.de\\
 		Felix Bühler, 2973410, st117123@stud.uni-stuttgart.de}
 \maketitle
@@ -100,7 +100,6 @@ Die vom \textit{Institut für Formale Methoden der Informatik Stuttgart} entwick
 Im Rahmen unseres Bachelor-Forschungsprojekt Informatik sollte diese Lücke geschlossen werden, indem eine Anfrage an das von uns entwickelte System eine Menge an damit verwandten, relevanten Tags zurückgibt.
 
 \pagebreak
-
 \section{Einleitendes}
 \subsection{Projektrahmen}
 Die Arbeit wurde im Rahmen des \textit{Bachelor-Forschungsprojekts Informatik} in der Zeit vom April bis Oktober 2018 angefertigt. Diese Ausarbeitung stellt die inhaltliche Dokumentation des entwickelten Moduls dar.
@@ -151,9 +150,8 @@ Wobei die Variablen \textit{key} und \textit{value} gemäß obiger Erklärung zu
 \subsubsection{Finallösung mit OSM-Wiki-Sitemap}
 Schlussendlich verfolgten wir den finalen Ansatz, die aktuelle Sitemap der Wiki-Seite\cite{sitemap-index-wiki-link} herunterzuladen und anschließend die Links, welche die im vorhergehenden Abschnitt beschriebene Strukur ausweisten, herausgeschrieben.\\
 Als Resultat hatten wir nun alle möglichen OSM-Wiki-Links lokal im \textit{txt}-Format zur Verfügung. Es konnten die Daten für den nächsten Arbeitsschritt, dem Aufbereiten der Einträge, weiterverwendet werden.
-%TODO wir haben hier die Wiki-Seiten nicht herunterladen! nur die links in einer txt datei gehabt den export haben wir mit "export-links.py" gemacht
 
-\subsection{Datenaufbereitung (Crawling)}
+\subsection{Crawling und Datenaufbereitung}
 Eine Such-Engine auf Grundlage der HTMl-Files aufzusetzen, schlossen wir aus mehreren Gründen aus. Zuerst, findet sich in den HTMl-Files viele unnötige Informationen wieder, z.B. Bild-Links, \textit{JavaScript}-Teile oder gar unwichtige Metainformationen der Seite. Das alles verlangsamt zum einen die spätere Suche, verfälscht zum anderen aber auch den späteren Such- und Indizierungsprozess.\\
 Unser Ziel war es, die Daten in eine solche Form umzuwandeln, dass unsere Such-Engine effizient darauf arbeiten kann.
 
@@ -161,25 +159,20 @@ Unser Ziel war es, die Daten in eine solche Form umzuwandeln, dass unsere Such-E
 Zu Beginn verfolgen wir die Idee, wiederkehrende Strukturen zu erkennen und in unser Suchranking miteinbeziehen. Existiert beispielsweise innerhalb der OSM-Wiki-Seite zu dem Tag \textit{highway=residential} ein Paragraphen \textit{related Tags} mit dem Eintrag \textit{highway=tertiary}, so ist es für den Nutzer möglicherweise interessant, auf Eingabe von \textit{highway} beide Ergebisse vorzufinden, auch wenn die Beschreibung von \textit{highway=tertiary} nicht allein zum Suchwort gepasst hätte. Es würde in folge dessen ein Beziehungs-Netzwerk aufgebaut werden.
 
 \subsubsection{Probleme des initialen Ansatzes}
-Unglücklicherweise stellten sich heraus, dass die Artikel des Wikis keiner spezifischen Form folgten. Zum einen sind die Strukturen zwischen den Artikeln sehr verschieden (zudem auch verschieden ausführlich), zum anderen finden sich inhaltlich ähnliche Absätze unter verschiedenen Überschriften, so beziehen sich ``See Also'', ``See also'', ``see also'', ``related tags'', ``Related Tags'' oder ``Similar Tag'' eigentlich semantisch auf dasselbe.
+Unglücklicherweise stellten sich heraus, dass die Artikel des Wikis keiner spezifischen oder homogenen Form folgten. Zum einen sind die Strukturen zwischen den Artikeln sehr verschieden (zudem auch verschieden ausführlich), zum anderen finden sich inhaltlich ähnliche Absätze unter verschiedenen Überschriften, so beziehen sich ``See Also'', ``See also'', ``see also'', ``related tags'', ``Related Tags'' oder ``Similar Tag'' eigentlich semantisch auf dasselbe.
 Das Ziel, weitere Informationen aus Tabellen zu entnehmen konnte aufgrund der heterogenen Struktur der Seiten ebenfalls nicht erreicht werden.
 
 \subsubsection{Implementierte Variante}
-%TODO wir haben die Wiki-Seiten herunterladen und in json abspeichern in einem Schritt gemacht. Weiter oben hattest du noch geschrieben, dass wir erstmal nur die html Seiten runtergeladen hatten.
 Um die spätere Suchanfrage dennoch befriedigend beantworten zu können, einigten wir uns auf eine Struktur, die die Seite in drei Teile zerteilt. Später werden diese dann unabhängig voneinander durchsucht und gewichtet in die Ergebnisliste eingebracht. Die Struktur der aufbereiteten Daten lässt sich der unteren Grafik \autoref{fig:jsonDarstellung} entnehmen.\\
 \begin{figure}[h]
 	\centering
 	\includegraphics[width=0.9\linewidth]{Bilder/json_structure}
-	\caption[Schematische Darstellung]{Schematische Darstellung der \textit{.json}-Struktur. Die Einträge mit spitzen Klammern markieren entsprech Meta-Anweisungen}
+	\caption[Schematische Darstellung]{Schematische Darstellung der \textit{.json}-Struktur. Die Einträge mit spitzen Klammern markieren entsprechend Meta-Anweisungen}
 	\label{fig:jsonDarstellung}
 \end{figure}
-Das Ergebnis dieser Arbeitsphase war eine vollständige Liste von \textit{.json}-Objekten, die die texteullen Informationen der HTML-Seiten enthalten, Metainformationen wie Skripte und HTML-Tags jedoch nicht. Zudem sind die Informationen gruppiert und wir erhalten Zugriff auf die Auftrittshäufigkeit eines jeden Tags.
-
-%TODO diese subsection
-\subsection{ausführen}
-%TODO zu crawling dazu machen, das
-alle gesammelten link in die \texttt{links.txt} legen
-\texttt{scrapy crawl osmWiki -t json -o keys.json}
+Der Crawler arbeitete die zuvor erstellete \textit{txt}-Linkliste sequentiell ab, und konvertierte die Eingabe direkt in das in \autoref{fig:jsonDarstellung} dargestellte Format.\\
+Dafür verwendeten wir den Aufruf \texttt{scrapy crawl osmWiki -t json -o keys.json} unseres eigenen Crawlers.\\
+ Das Ergebnis dieser Arbeitsphase war eine vollständige Liste von \textit{.json}-Objekten, die die texteullen Informationen der HTML-Seiten enthalten, Metainformationen wie Skripte und HTML-Tags jedoch nicht. Zudem sind die Informationen gruppiert und wir erhalten Zugriff auf die Auftrittshäufigkeit eines jeden Tags.
 
 \subsection{Suchanfrage beantworten}
 Die finale Phase verknüpft alle bereits getätigten Arbeiten zu einer gesamten Anwendung, die aus mehreren funktionalen Einheiten besteht. Aus der \autoref{fig:implstructure} lassen sich die wesentlichen Komponenten erkennen. \\
@@ -205,7 +198,7 @@ Die dahinterstehende Idee des ersten Pipeline-Knotens ist die Folgende: Da die T
 \textit{}\\
 \textbf{Realisierung}\\
 Wir verwendeten für die Umsetzung das Framework \textit{Google word2vec}\cite{googleword2vec}. Es erlaubt auf Eingabe eines Wortes die Suche nach möglichst nahegelegenen Wörtern mit derselben Semantik. Der große Vorteil dadurch ist zusätzlich, dass wir parallel nach Singular und Plural der Eingabe suchen können, da deren Semantik praktisch identisch ist.\\
-%TODO ich dachte wir haben e viele genommen nicht e-1
+%Felix: nein, wir haben auf e Wörter insgesammt expandiert, davon war der erste die ursprüngliche Suchanfrage.
 Das Resultat der Anwendung des Frameworks sind \textit{e-1} semantisch ähnliche Wörter, die zu dem Vektor der Eingabequery in nächster Umgebung lagen. Wir nennen diese im folgenden $q_2, q_3, \dots, q_e$. Implizit wird $q_1$ als die Anfangsquery betrachtet.
 
 Neben den semantisch ähnlichen Queries speichern wir ebenfalls die vektorwertige (semantischen) Distanz zum Eingabevektor ab. Diese Ähnlichkeitswerte nennen wir entsprechend  $s_1, s_2, \dots, s_e$ mit der Eigenschaft $0 < s_i \leq 1$. Je höher dieser Wert, desto näher ist der Begriff der Ursprungsquery semantisch. Es dürfte offensichtlich sein, dass $s_1$ demnach den Wert $1$ besitzt.
@@ -236,40 +229,50 @@ Die Bedeutung der Berechnung sollte intuitiv sein: Jeder der $e$ Vektoren speich
 Der finale Scoring-Vektor lässt sich demnach mit\\
 \begin{center}
 	$\vec{fin} = \sum_{i=1}^{e} s_i * \vec{score}_{i}^{'}$
-\end{center}.
-berechnen.
-
+\end{center} berechnen.
 
 \subsubsection{top k - result collecting}
-Die Berechnung in \autoref{sec:term_weighting} liefert uns eine Vektor mit der Dimension in der Anzahl der Tags, und repräsentiert die Befriedigung der Eingabequery. Um den Benutzer eine Auswahl über mehrere mögliche passende Tags zu bieten, werden nun davon die besten \textit{k} Ergebnisse zurück geliefert.
-%TODO wir suchen argmax und geben den, Tag aus unserem index aus.
+Die Berechnung in \autoref{sec:term_weighting} liefert uns eine Vektor mit der Dimension in der Anzahl der Tags, und repräsentiert die Befriedigung der Eingabequery. Um den Benutzer eine Auswahl über mehrere mögliche passende Tags zu bieten, liefern wir mit Anwendung von \textit{argmax} auf $\vec{fin}$ davon die besten \textit{k} Ergebnisse zurück.\\
+Zudem liefern wir noch einen Wert im Intervall $(0,1)$ zurück, der Angibt, wie passend der Tag die Anfrage widerspiegelt. Die Werte wurden dabei mithilfe der Funktion \textit{softmax} adäquat skaliert.
+\pagebreak
 
 \section{Bedienung der Anwendung}
+Die Folgenden Abschnitte sollen beispielhafte Abläufe darlegen die das Starten des Servers, das Anfragen sowie das anschließende Auswerten der Response erläutern.
 
 \subsection{Starten}
-man muss im gleichen ordner auch \texttt{GoogleNews-vectors-negative300.bin}, das hier runtergealden werdxen kann \cite{googleword2vec} und die \texttt{tags.json} von uns aus dem crawler.\\
-\texttt{python3 ./search.py}
-%TODO ausformulieren
-\subsection{Aufbau der Anfrage}
-Beispiel Anfrage
-\begin{lstlisting}
-	curl -d '{"query":"house", "amount":5, "nearest_neighbor":10}' -H "Content-Type: application/json" -X POST http://localhost:8080
-\end{lstlisting}
-%TODO ausformulieren
-\subsection{Rückgabe}
-\begin{lstlisting}
-	[["Tag:landuse=residential", 0.6396545082270853], ["Tag:building=house", 0.11751306010961371], ["Tag:building=cabin", 0.09408986107578671], ["Tag:building=detached", 0.07558317020115245], ["Tag:building=farm", 0.07315940038636194]]
-\end{lstlisting}
-%TODO ausformulieren
+Zum Starten der Anwendung sind drei Files notwendig, die standardmäßig im selben Verzeichnis liegen müssen: Zuerst ist das Vektor-Modell \texttt{GoogleNews-vectors-negative300.bin} von Google notwendig, das auf ihrer Website zum Download angeboten wird \cite{googleword2vec}. Zudem muss die  \texttt{tag.json}-Datei vorliegen, die die Inhalte aller OSM-Seiten beinhaltet. Zuletzt muss das eigentlichen Skript  \texttt{search.py} im Verzeichnis bereit liegen.\\
+Das Ausführen der Anwendung wird mit \texttt{python3 ./search.py} angestoßen.\\
+Nun können Anfragen an das System gestellt werden, sobald dieses vollständig hochgefahren ist.
 
-\section{Projektrefelxion}
+
+\subsection{Aufbau der Anfrage}
+Eine beispielhafte Anfrage an das System nach dem Term \textit{house}, dem Expansionsgrad \textit{10} (Folglich $e=9$) und der Rückgabe  von anschließend \textit{5} Tag-Ergebnissen sieht wie folgt aus:
+\begin{lstlisting}
+	curl -d '{"query":"house", "amount":5, "nearest_neighbor":10}' 
+	-H "Content-Type: application/json" -X POST http://localhost:8080
+\end{lstlisting}
+
+
+\subsection{Aufbau der Rückgabe}
+Die Rückgabe besteht aus einem \textit{json}-String, genauer gesagt eine Liste von Listen, die jeweils einen Tag und der dazugehörige Scoring-Wert liefern.
+\begin{lstlisting}
+	[["Tag:landuse=residential", 0.6396545082270853], 
+	 ["Tag:building=house", 0.11751306010961371], 
+	 ["Tag:building=cabin", 0.09408986107578671], 
+	 ["Tag:building=detached", 0.07558317020115245], 
+	 ["Tag:building=farm", 0.07315940038636194]]
+\end{lstlisting}
+
+\pagebreak
+
+\section{Projektreflexion}
 \subsection{Verbesserungsansätze}
 Nach Abschluss des Projektes möchten wir ein paar Ansätze nennen, an denen man in Zukunft arbeiten könnte, um das System effizienter und schneller zu machen und die Qualität des Rankings zu erhöhen.
 \subsubsection{Google Word2Vec}
 Das aktuelle Modell, das wir für das Expandieren der Wörter auf e Terms verwenden, besitzt eine Größe von circa 3.4 Gigabyte. Folglich nimmt das Starten des Serves eine erhebliche Zeit in Anspruch, zudem werden Speicherressourcen verschwendet.\\
 Da in dem eigentlichen tf-idf-Scoring ein Treffer nur als ein solcher gezählt wird, wenn dieser als String innerhalb eines Wiki-Dokumente auftaucht, könnten wir in dem Google-Vektor Modell nur solche Wörter als Eingabe erlauben, die in der Wiki-Seiten vorkommen.\\
-Das spart Platz im RAM, sowie Zeit beim Ein- und auslesen.
-%TODO auslesen macht kein sinn. aber vor allem wird das Suchen extrem viel schneller.
+Das spart Platz im RAM, außerdem würde es die Suchzeit erheblich verringern.
+
 \subsubsection{Syntaktische um Semantische Suche ergänzen}\label{sec:semantikInSuche}
 Wir verwenden eine semantische Erweiterung der Startanfrage auf insgesamt \textit{e} Suchanfragen. Leider verwendet unser aktuelles System für den eigentlichen Suchalgorithmus lediglich eine syntaktische Suche. Hier entstehen Treffer, die nicht als solche gezählt werden sollten. Beispielsweise wird ein Tag bei der Suche nach \textit{waterfall} mit einem Treffer markiert, wenn es Formulierungen wie \textit{`... not to be confounded with waterfall''} beinhaltet.\\
 Man könnte sich in diesem Zusammenhang mit dem Framework \textit{NLTK} unter Python auseinandersetzen. Hier könnte neben der Wiki-Seiten, auch die Query semantisch analysiert werden, sodass gezielt Fragen beantwortet werden könnten
@@ -280,13 +283,14 @@ Schwierig bleibt jedoch auch hier wieder die Gewichtung der Semantik. Selbiges P
 \label{sec:gliederungContent}
 In \autoref{sec:scoring} erläuterten wir das Vorgehen, verschiedene Teile der Wiki-Seiten unabhängig zu indizieren und anschließend den Score geeignet zu kombinieren. Eine begründete Wahl der $c_i$ zu finden, stellt sich als Herausforderung dar. Der Lesen möge sich die Frage ``Welcher Tag passt am besten zur Eingabe ...?'' konstruieren, um herauszufinden, welche Parameterwahl als passend erscheint. \\
 Für mehr als 2 Freiheitsgrade der Parameter wird es sich allerdings als schwierig herausstellen, die Optimalität dieser Wahl zu begründen.
-
-%TODO softmax ausgabe noch beschreiben warum
+\subsubsection{Automatische Eingabekorrektur}
+Ein Expandieren der Eingabe ist nicht möglich, wenn das Eingabewort nicht Teil des Word2Vec-Modells ist. So ein Fall tritt insbesondere dann auf, wenn die Eingabe durch einen Tippfehler verfälscht ist. Eine automatische Korrektur wäre hier sinnvoll, um beispielsweise \textit{airprt} automatisch zu \textit{airport} zu korrigieren.
 
 
 \subsection{Ergebnisqualität}
 Dieser Abschnitt erläutert anhand ausgewählter Anfragen die Charakteristika der entwickelten Such-Engine. Dieser Abschnitt kann unter anderem auch Inspiration für weitere Verbesserungen verstanden werden.
 \subsubsection{gute Ergebnisse}
+Im folgenden sind Beispiele gegeben, für die eine Händische Suche durch alle Tags ein analoges Ergebnis produziert hätte.\\
 \begin{minipage}[t]{0.45\linewidth}
 \begin{lstlisting}
 	Search: airport
@@ -318,9 +322,10 @@ Dieser Abschnitt erläutert anhand ausgewählter Anfragen die Charakteristika de
 	Tag:sport=lacrosse
 	\end{lstlisting}
 \end{minipage}
-%TODO so gut?
 
 \subsubsection{überraschende Ergebnisse}
+Diese Beispiele zeigen schön, dass die ursprüngliche Suche semantisch erweitert wurde. So finden wir auf der einer Seite passende Begriffe wie Bahnhof-Tags, zum anderen auch einen Tag für Restaurants, in Anlehnung an das gleichnamige Unternehmen.\\
+Die zweite Suchanfrage sucht neben der Personenbezeichnung offensichtlich auch deren Wohnumgebung, obwohl in dem OSM-Artikel das Wort \textit{knight} in dem gefunden Tag nicht einmal auftaucht.
 \begin{minipage}[t]{0.45\linewidth}
 \begin{lstlisting}
 	Search: subway
@@ -337,8 +342,10 @@ Dieser Abschnitt erläutert anhand ausgewählter Anfragen die Charakteristika de
 	Tag:castle_type=defensive
 \end{lstlisting}
 \end{minipage}
-%TODO beschreiben warum
+
+
 \subsubsection{unzureichende Ergebnisse}
+Als Ansatz für zukünftige Optimierungen stellen wir hier noch ein paar Beispiele zur Schau, in die zukünftige Optimierungen einhaken könnten.
 \begin{lstlisting}
 	Search: bow
 	Tag:sport=bandy 	 	0.5166928762734
@@ -352,7 +359,8 @@ aber
 	Tag:highway=traffic_signals 	0.14598696420532248
 	Tag:junction=roundabout 	0.1407544954451397
 \end{lstlisting}
-%TODO es gibt also archery, wird bei bow aber nicht gefunden
+Interessanterweise gibt es den Sport \textit{Bogenschießen} als Tag innerhalb der OSM-Seiten. Leider wird bei Eingabe von \textit{bow} nicht die logisch passende Sportart angezeigt. Die Suche nach \textit{Pfeil} hingegen ist erfolgreich.
+
 \begin{lstlisting}
 	Search: church
 	Tag:tower:type=bell_tower 	 	0.5335585869452344
@@ -370,61 +378,27 @@ aber
 	Tag:building=farm_auxiliary 		0.1543794781358878
 	Tag:building=construction 	 	0.14787582939721966
 \end{lstlisting}
-%TODO findet es nicht direkt, auch wenn es das gibt
-
-\section{ausblick/besser machen}
-- automatische Korrektur, wenn man sich verschreibt. "airprt" wird zu "airport"
-%TODO ausformulieren
-
-
-\section{notizen}
-Phase 1: Planung
-- Tags und dazugehörige semantische Beschreibung holen
-- in Struktur bringen
-- Suchanfrage an Daten 
-- gensim (Python von Mendel zu Beginn vorgeschlagen)
-- vorhanden/nicht vorhanden 
--> bewerbung fehlt
-- tf-idf
--> gut, aber Problem: Mehrere Links auf dieselbe Seite
--> Duplikate entfernen
--> hohe Gewichtung für kleine Seiten
--> Multiplizieren mit log/oder Wurzel 2
-- Suchraum expandieren
-- mit Google Modell Anfrage semantisch auffüllen, Suche durchführen, am meisten Relevanten herausnehmen.
-
-
-\pagebreak
-\section{Vorgehensweise}
-
-1. Anschauen von wiki xml dump (Export von 2013) 
--> Struktur nicht erkennbar + veraltete Daten.
-
-2. taginfo: (um an Tags zu kommen) Datenbank herunter geladen, nicht immer aktuellster Stand, Statitsik: Idee: Generieren von Links, mithilfe von Key=value Anfrage an Website, aber möglicherweise Fehler, da dazu kein Wiki-Eintrag exisitert.
-
-3. nochmal wiki xml dump -> Alle Links des Wikis
-4  davon Struktur: filtern der Links, die auf Tags verweisen.
--> Ergebnis: Liste aller Links, die auf OSM-Tag-Seiten zeigen.
-5. Crawler: Download aller HTML Files
-6. Ergebnis: pretty-Datei.
-
-Implementierung:
-1. Schritt: expandieren der Suchanfrage gemäß Semantik auf k Begriffe (mithilfe von W2V) 
-2. Schritt: für jeden 
-
-
-herunterladen der tags: https://taginfo.openstreetmap.org/
-
-
-\section{Dependecies}
-%TODO mitliefern?
-\begin{itemize}
-	\item crawler: Scrapy(crawl) und BeautifulSoup(html-parser)
-	\item suche: sklearn(tfidf), gensim(google-model), numpy und nltk(für stopwords)
-\end{itemize}
+Auch hier liegt ein ähnliches Problem wie im Beispiel oberhalb vor.
 
 \pagebreak
 \section{Anhang}
+
+
+\section*{Verwendete Frameworks}
+%TODO Felix: Mitliefern? Ich finde schon.
+\textbf{Crawler}
+\begin{itemize}
+	\item Scrapy (Crawl-Helfer) 
+	\item BeautifulSoup (html-Parser)
+\end{itemize}
+\textbf{Suche}
+\begin{itemize}
+	\item sklearn(tf-idf Gewichtung)
+	\item gensim (Google-model)
+	\item numpy 
+	\item nltk (Stopwords)
+\end{itemize}
+
 
 
 \bibliographystyle{unsrt}
